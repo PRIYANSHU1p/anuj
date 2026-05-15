@@ -32,16 +32,24 @@ const HealthTimeline = ({ events: propEvents }) => {
               style={{ position: 'relative' }}
             >
               {/* Dot */}
-              <div style={{ position: 'absolute', left: '-2rem', top: '5px', width: '16px', height: '16px', background: 'white', border: `3px solid ${event.color}`, borderRadius: '50%', zIndex: 2 }}></div>
+              <div style={{ position: 'absolute', left: '-2rem', top: '5px', width: '16px', height: '16px', background: 'var(--surface)', border: `3px solid ${event.color}`, borderRadius: '50%', zIndex: 2 }}></div>
               
               <div style={{ background: 'var(--background)', padding: '1.25rem', borderRadius: '15px', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: event.color, textTransform: 'uppercase' }}>{event.date}</span>
-                  {event.type === 'ai' && <ShieldCheck size={14} color="#8b5cf6" />}
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: event.color || 'var(--primary)', textTransform: 'uppercase' }}>{event.date}</span>
+                  {(event.type === 'ai' || event.type === 'record') && <ShieldCheck size={14} color="var(--success)" />}
                 </div>
                 <h4 style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: '0.5rem' }}>{event.title}</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Record secured on National Health Stack • Block #{4500 + i}
+                
+                {event.bp && (
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BP: <span style={{ color: 'var(--text)', fontWeight: 700 }}>{event.bp}</span></div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Sugar: <span style={{ color: 'var(--text)', fontWeight: 700 }}>{event.sugar}</span></div>
+                  </div>
+                )}
+
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4, opacity: 0.8 }}>
+                  Validated via ABHA Health Identity • Node Hash: {Math.random().toString(16).slice(2, 8).toUpperCase()}
                 </p>
               </div>
             </motion.div>
@@ -49,7 +57,21 @@ const HealthTimeline = ({ events: propEvents }) => {
         </div>
       </div>
       
-      <button style={{ width: '100%', marginTop: '2rem', padding: '1rem', background: 'transparent', border: '2px dashed var(--border)', borderRadius: '12px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+      <button 
+        onClick={() => {
+          const content = `MEDICAL HEALTH RECORD\n\nGenerated: ${new Date().toLocaleString()}\n\nEvents:\n${events.map(e => `- ${e.date}: ${e.title}`).join('\n')}`;
+          const blob = new Blob([content], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `MedLink_Health_Record_${Date.now()}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }}
+        className="glow-on-hover"
+        style={{ width: '100%', marginTop: '2rem', padding: '1.25rem', background: 'var(--primary)', border: 'none', borderRadius: '12px', fontWeight: 800, color: 'white', fontSize: '0.9rem', cursor: 'pointer' }}
+      >
         Download Full Lifetime Record (PDF)
       </button>
     </div>

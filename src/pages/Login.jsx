@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User as UserIcon, Shield, ChevronRight, Building2, CheckCircle2 } from 'lucide-react';
@@ -18,9 +18,18 @@ const Login = () => {
      password: '',
      full_name: '',
      license_number: '',
-     abha_id: ''
+     abha_id: '',
+     specialization: 'General Physician',
+     experience: '',
+     qualification: '',
+     timing: '09:00 AM - 05:00 PM'
    });
   
+  useEffect(() => {
+    // Automatically seed demo accounts on load for hackathon convenience
+    import('../utils/BulkSeeder').then(m => m.seedAllAccounts());
+  }, []);
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +51,11 @@ const Login = () => {
            full_name: formData.full_name,
            role: role,
            license_number: role === 'doctor' ? finalLicense : null,
-           abha_id: role === 'patient' ? finalAbha : null
+           abha_id: role === 'patient' ? finalAbha : null,
+           specialization: role === 'doctor' ? formData.specialization : null,
+           experience: role === 'doctor' ? formData.experience : null,
+           qualification: role === 'doctor' ? formData.qualification : null,
+           timing: role === 'doctor' ? formData.timing : 'N/A'
          });
         setSuccess(true);
         setTimeout(() => {
@@ -146,13 +159,29 @@ const Login = () => {
                       </div>
 
                       {role === 'doctor' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>MEDICAL LICENSE NUMBER</label>
-                          <div style={{ position: 'relative' }}>
-                            <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                            <input type="text" name="license_number" value={formData.license_number} onChange={handleChange} placeholder="MCI-123456 (Optional)" style={{ width: '100%', paddingLeft: '3rem' }} />
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>SPECIALIZATION</label>
+                            <select name="specialization" value={formData.specialization} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '12px', background: 'var(--background)', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 700 }}>
+                              <option value="Cardiologist">Cardiologist</option>
+                              <option value="Dermatologist">Dermatologist</option>
+                              <option value="Neurologist">Neurologist</option>
+                              <option value="Pulmonologist">Pulmonologist</option>
+                              <option value="Diabetologist">Diabetologist</option>
+                              <option value="General Physician">General Physician</option>
+                            </select>
                           </div>
-                        </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>EXPERIENCE (YRS)</label>
+                              <input type="number" name="experience" value={formData.experience} onChange={handleChange} placeholder="5" />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>QUALIFICATION</label>
+                              <input type="text" name="qualification" value={formData.qualification} onChange={handleChange} placeholder="MD, MBBS" />
+                            </div>
+                          </div>
+                        </motion.div>
                       )}
 
                       {role === 'patient' && (
@@ -218,6 +247,16 @@ const Login = () => {
             </motion.div>
           )}
         </AnimatePresence>
+       <div style={{ marginTop: '2rem', textAlign: 'center', opacity: 0.3 }}>
+          <button 
+            onClick={() => {
+              import('../utils/BulkSeeder').then(m => m.seedAllAccounts());
+            }}
+            style={{ fontSize: '0.7rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            [ ADMIN: Seed 10 Demo Accounts ]
+          </button>
+       </div>
       </motion.div>
     </div>
   );

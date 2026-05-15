@@ -18,13 +18,15 @@ import ChatComponent from '../components/ChatComponent';
 import DigitalTwin from '../components/DigitalTwin';
 import KarmaMeter from '../components/KarmaMeter';
 import AIHealthNews from '../components/AIHealthNews';
-import GeoResponder from '../components/GeoResponder';
+import ImpactLeaderboard from '../components/ImpactLeaderboard';
 import HealthTimeline from '../components/HealthTimeline';
+import ElysianHologram from '../components/ElysianHologram';
+import GeoResponder from '../components/GeoResponder';
 import AIVisionScanner from '../components/AIVisionScanner';
 import UniversalHealthGraph from '../components/UniversalHealthGraph';
-import ElysianHologram from '../components/ElysianHologram';
 import LiveGridMap from '../components/LiveGridMap';
 import { useEmotionAI } from '../hooks/useEmotionAI';
+import { getSpecialistForDisease } from '../utils/SpecializationMapper';
 
 
 
@@ -36,7 +38,7 @@ const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [requests, setRequests] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newRequest, setNewRequest] = useState({ service: 'General Checkup', note: '', urgency: 'low', abha_id: '' });
+  const [newRequest, setNewRequest] = useState({ disease: 'Diabetes', note: '', urgency: 'low' });
   const [isListening, setIsListening] = useState(false);
   const [symptoms, setSymptoms] = useState('');
   const [heartRate, setHeartRate] = useState(0);
@@ -75,6 +77,7 @@ const PatientDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
   const [healthRecord, setHealthRecord] = useState(null);
+  const [activeRequests, setActiveRequests] = useState([]);
 
   const fetchHealthRecord = async () => {
     if (!user?.$id) return;
@@ -100,8 +103,35 @@ const PatientDashboard = () => {
     }
   };
 
+  const fetchActiveRequests = async () => {
+    if (!user?.$id) return;
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTION_REQUESTS,
+        [Query.equal('patient_id', user.$id), Query.orderDesc('$createdAt'), Query.limit(5)]
+      );
+      setActiveRequests(response.documents);
+    } catch (error) {
+      console.error("Error fetching active requests:", error);
+    }
+  };
+
   useEffect(() => {
     fetchHealthRecord();
+    fetchActiveRequests();
+
+    // REALTIME REQUEST SYNC
+    const unsubscribe = client.subscribe(
+      `databases.${DATABASE_ID}.collections.${COLLECTION_REQUESTS}.documents`, 
+      response => {
+        if (response.events.some(e => e.includes('.create') || e.includes('.update') || e.includes('.delete'))) {
+          fetchActiveRequests();
+        }
+      }
+    );
+
+    return () => unsubscribe();
   }, [user?.$id]);
 
   useEffect(() => {
@@ -146,26 +176,57 @@ const PatientDashboard = () => {
     recognition.start();
   };
   
+  const handleSeedData = async () => {
+    if (!user?.$id) return;
+    setLoading(true);
+    try {
+      // Seed some health records
+      await databases.createDocument(DATABASE_ID, COLLECTION_RECORDS, ID.unique(), {
+        patient_id: user.$id,
+        bp: "125/82",
+        sugar: "105",
+        status: "Baseline"
+      });
+      
+      // Seed an active request
+      await databases.createDocument(DATABASE_ID, COLLECTION_REQUESTS, ID.unique(), {
+        patient_id: user.$id,
+        patient_name: user.full_name || user.name,
+        symptoms: "Occasional dizziness and mild fatigue. Requesting routine checkup.",
+        department: "General Medicine",
+        status: "pending"
+      });
+
+      alert("Demo Data Synced! Your health dashboard is now populated.");
+      fetchHealthRecord();
+      fetchActiveRequests();
+    } catch (error) {
+      console.error("Seeding failed:", error);
+      alert("Seeding failed: " + error.message);
+    }
+    setLoading(false);
+  };
+
   const handleNewRequest = async (e) => {
     e.preventDefault();
     if (!user?.$id) return;
     setLoading(true);
     try {
+      const specialistDept = getSpecialistForDisease(newRequest.disease);
       await databases.createDocument(DATABASE_ID, COLLECTION_REQUESTS, ID.unique(), {
         patient_id: user.$id,
         patient_name: user.full_name,
-        department: newRequest.service,
+        department: specialistDept,
         symptoms: newRequest.note,
-        urgency: newRequest.urgency,
-        status: 'pending',
-        created_at: new Date().toISOString()
+        urgency: newRequest.urgency || 'low',
+        status: 'pending'
       });
       setShowModal(false);
-      setNewRequest({ service: 'General Checkup', note: '', urgency: 'low', abha_id: '' });
+      setNewRequest({ disease: 'Diabetes', note: '', urgency: 'low' });
       alert("Request Submitted Successfully!");
     } catch (err) {
-      console.error(err);
-      alert("Failed to submit request.");
+      console.error("SUBMISSION_ERROR:", err);
+      alert(`Submission Failed: ${err.message || JSON.stringify(err)}`);
     } finally {
       setLoading(false);
     }
@@ -228,12 +289,8 @@ const PatientDashboard = () => {
             patient_id: user?.$id,
             patient_name: user?.full_name,
             symptoms: input || symptoms,
-            urgency: 'critical',
-            suggestion: enrichedResult.suggestion,
             department: enrichedResult.department,
-            location: locString,
-            status: 'pending',
-            created_at: new Date().toISOString()
+            status: 'pending'
           }
         );
       }
@@ -252,200 +309,170 @@ const PatientDashboard = () => {
           <h1 style={{ fontSize: '3rem', fontWeight: 900 }}>Your <span className="text-gradient">Health Command</span></h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>Welcome back, {user?.full_name}</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
            <button 
              onClick={handleConnectWatch} 
-             className="glass-card" 
+             className="glow-on-hover" 
              style={{ 
-               padding: '1rem 2rem', 
+               padding: '0.75rem 1.5rem', 
                background: isWatchConnected ? 'var(--success)' : 'var(--accent)', 
                color: 'white', 
-               fontWeight: 700, 
-               borderRadius: '15px',
+               fontWeight: 800, 
+               borderRadius: '12px',
                display: 'flex',
                alignItems: 'center',
-               gap: '0.5rem'
+               gap: '0.6rem',
+               border: 'none',
+               fontSize: '0.85rem',
+               height: '48px'
              }}
            >
-             <Watch size={20} />
+             <Watch size={18} />
              {isWatchConnected ? 'Watch Active' : 'Connect Smart Watch'}
            </button>
-            <button onClick={() => setShowModal(true)} className="glass-card" style={{ padding: '1rem 2rem', background: 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlusCircle size={20} /> Request Appointment
+            <button 
+              onClick={() => setShowModal(true)} 
+              className="glow-on-hover" 
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: 'var(--primary)', 
+                color: 'white', 
+                fontWeight: 800, 
+                borderRadius: '12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.6rem',
+                border: 'none',
+                fontSize: '0.85rem',
+                height: '48px'
+              }}
+            >
+              <PlusCircle size={18} /> Request Appointment
             </button>
-            <button onClick={isNeuralListening ? stopAnalysis : startAnalysis} className="glass-card" style={{ padding: '1rem 2rem', background: isNeuralListening ? 'var(--error)' : 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px' }}>
+            <button 
+              onClick={isNeuralListening ? stopAnalysis : startAnalysis} 
+              className="glow-on-hover" 
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: isNeuralListening ? 'var(--error)' : 'var(--primary)', 
+                color: 'white', 
+                fontWeight: 800, 
+                borderRadius: '12px',
+                border: 'none',
+                fontSize: '0.85rem',
+                height: '48px',
+                minWidth: '160px'
+              }}
+            >
               {isNeuralListening ? 'Stop Neural Sync' : 'Start Neural Sync'}
             </button>
         </div>
       </header>
 
-      {/* Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
-        <KarmaMeter points={(user?.total_karma || 0) + (vitalsHistory.length * 50)} rank={vitalsHistory.length > 5 ? 'Guardian Spirit' : 'Healing Soul'} />
-
-        <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--error)', color: 'white' }}>
-          <PhoneCall size={32} style={{ marginBottom: '1rem' }} />
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{t('emergency')}</h3>
-          <p style={{ opacity: 0.8, marginBottom: '1.5rem', fontSize: '0.875rem' }}>Click for instant AI triage & ambulance dispatch.</p>
-          <button 
-            onClick={() => {
-              handleAiAnalysis('CRITICAL EMERGENCY: CHEST PAIN AND BREATHING DIFFICULTY');
-            }} 
-            className="glow-on-hover" 
-            style={{ background: 'white', color: 'var(--error)', padding: '1rem', borderRadius: '12px', fontWeight: 800, border: 'none' }}
-          >
-            TRIGGER SOS DISPATCH
-          </button>
-        </div>
-      </div>
-
-      {/* AI Smart Triage Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-        <div className="glass-card" style={{ padding: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-            <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '10px' }}>
-              <Activity size={24} />
+      {/* Unified Command Center - 3 Columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '1.5rem', marginBottom: '2rem' }}>
+        {/* Col 1: Digital Twin Stats */}
+        <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+            <div style={{ background: 'var(--primary)', color: 'white', padding: '0.4rem', borderRadius: '8px' }}>
+              <Activity size={20} />
             </div>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>AI Health Digital Twin</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Digital Twin</h3>
           </div>
-          <div style={{ height: '400px', minHeight: '400px' }}>
-            <DigitalTwin 
-              score={healthRecord?.score || 0} 
-              status={healthRecord?.status || 'Syncing...'} 
-              bp={healthRecord?.bp || 'N/A'}
-              sugar={healthRecord?.sugar || 'N/A'}
-              heartRate={heartRate}
-            />
-          </div>
+          <DigitalTwin 
+            score={healthRecord?.score || 0} 
+            status={healthRecord?.status || 'Syncing...'} 
+            bp={healthRecord?.bp || 'N/A'}
+            sugar={healthRecord?.sugar || 'N/A'}
+            heartRate={heartRate}
+            isWatchConnected={isWatchConnected}
+          />
         </div>
 
-
-            <div style={{ padding: '3rem', textAlign: 'center', position: 'relative' }}>
-              <div style={{ position: 'relative', width: '280px', height: '280px', margin: '0 auto' }}>
-                {/* Neon Background Glow */}
-                <div style={{ position: 'absolute', inset: '-20px', borderRadius: '50%', background: isWatchConnected ? 'radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%)', filter: 'blur(20px)', animation: 'pulse 2s infinite' }} />
-                
-                {/* Outer Rotating Rings */}
-                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid rgba(14, 165, 233, 0.1)', borderTop: '2px solid var(--primary)', animation: 'spin 4s linear infinite' }} />
-                <div style={{ position: 'absolute', inset: '10px', borderRadius: '50%', border: '1px dashed rgba(14, 165, 233, 0.3)', animation: 'spin 8s linear reverse infinite' }} />
-
-                {/* Central Biometric Hub */}
-                <div style={{ position: 'absolute', inset: '20px', borderRadius: '50%', background: 'var(--surface)', boxShadow: 'inset 0 0 30px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  
-                  {/* Live ECG Waveform Animation */}
-                  <svg width="100%" height="60" viewBox="0 0 100 40" style={{ position: 'absolute', bottom: '25%', opacity: 0.3 }}>
-                    <motion.path
-                      d="M0 20 L20 20 L25 10 L30 30 L35 20 L50 20 L55 5 L60 35 L65 20 L100 20"
-                      fill="none"
-                      stroke={isWatchConnected ? 'var(--success)' : 'var(--primary)'}
-                      strokeWidth="1"
-                      animate={{ x: [-100, 0] }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    />
-                    <motion.path
-                      d="M100 20 L120 20 L125 10 L130 30 L135 20 L150 20 L155 5 L160 35 L165 20 L200 20"
-                      fill="none"
-                      stroke={isWatchConnected ? 'var(--success)' : 'var(--primary)'}
-                      strokeWidth="1"
-                      animate={{ x: [-100, 0] }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    />
-                  </svg>
-
-                  <Heart 
-                    size={32} 
-                    color={isWatchConnected ? 'var(--success)' : 'var(--error)'} 
-                    style={{ animation: `pulse ${heartRate > 100 ? '0.4s' : '0.8s'} infinite`, marginBottom: '0.5rem' }} 
-                  />
-                  
-                  <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '4.5rem', fontWeight: 900, letterSpacing: '-2px', color: 'var(--text)' }}>
-                      {heartRate || '72'}
-                    </span>
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-muted)', marginLeft: '4px' }}>BPM</span>
-                  </div>
-
-                  <div className={`badge ${isWatchConnected ? 'badge-success' : 'badge-primary'}`} style={{ marginTop: '0.5rem', fontSize: '0.6rem', padding: '0.2rem 0.8rem' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', animation: 'pulse 1s infinite' }} />
-                    {isWatchConnected ? 'REAL-TIME BIO-LINK' : 'ESTIMATED'}
-                  </div>
-                </div>
-
-                {/* Floating Metrics (Holographic) linked to Watch */}
-                <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '-10%', right: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: '1px solid rgba(14, 165, 233, 0.2)', backdropFilter: 'blur(10px)', textAlign: 'left' }}>
-                   <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>SPO2</div>
-                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0ea5e9' }}>
-                     {isWatchConnected ? (97 + (heartRate % 3)) : '98'}%
-                   </div>
-                </motion.div>
-                
-                <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '0%', left: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: `1px solid ${heartRate > 100 ? 'var(--error)' : 'rgba(192, 38, 211, 0.2)'}`, backdropFilter: 'blur(10px)', textAlign: 'left' }}>
-                   <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>STRESS</div>
-                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: heartRate > 100 ? 'var(--error)' : '#c026d3' }}>
-                     {heartRate === 0 ? 'Normal' : (heartRate > 100 ? 'High' : 'Low')}
-                   </div>
-                </motion.div>
-              </div>
-            </div>
-
-        <div className="glass-card" style={{ padding: '3rem', border: '2px solid var(--primary-light)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-            <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '10px' }}>
-              <Activity size={24} />
-            </div>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{t('aiTriage')}</h3>
+        {/* Col 2: Live Heart Visualization */}
+        <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '1.5rem', left: '1.5rem' }}>
+            <div className="badge badge-success" style={{ fontSize: '0.6rem' }}>LIVE FEED</div>
+          </div>
+          <div style={{ width: '220px', height: '220px', borderRadius: '50%', border: `1px solid ${isWatchConnected ? 'var(--success)' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(14, 165, 233, 0.05) 0%, transparent 70%)', position: 'relative' }}>
+             <Heart size={32} color={isWatchConnected ? 'var(--success)' : 'var(--error)'} style={{ animation: `pulse ${heartRate > 100 ? '0.4s' : '0.8s'} infinite` }} />
+             <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                <span style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--text)' }}>{heartRate || '72'}</span>
+                <span style={{ fontSize: '0.8rem', opacity: 0.5, marginLeft: '4px' }}>BPM</span>
+             </div>
           </div>
           
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <input 
-                type="text" 
-                id="symptomInput"
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', marginTop: '2rem' }}>
+             <div style={{ padding: '0.75rem', background: 'var(--surface-secondary)', borderRadius: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>SPO2</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{isWatchConnected ? (97 + (heartRate % 3)) : '98'}%</div>
+             </div>
+             <div style={{ padding: '0.75rem', background: 'var(--surface-secondary)', borderRadius: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>STRESS</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: heartRate > 100 ? 'var(--error)' : 'var(--accent)' }}>{heartRate > 100 ? 'High' : 'Normal'}</div>
+             </div>
+          </div>
+        </div>
+
+        {/* Col 3: AI Triage & Analysis */}
+        <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'var(--accent)', color: 'white', padding: '0.4rem', borderRadius: '8px' }}>
+              <ShieldCheck size={20} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>AI Symptom Analyzer</h3>
+          </div>
+          
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ position: 'relative' }}>
+              <textarea 
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
-                placeholder="Describe symptoms or use voice..." 
-                style={{ width: '100%', padding: '1.25rem', paddingRight: '3.5rem', borderRadius: '15px', fontSize: '1rem' }}
+                placeholder="Describe how you are feeling today..."
+                style={{ 
+                  width: '100%', padding: '1rem', borderRadius: '15px', 
+                  background: 'var(--surface)', border: '1px solid var(--border)', 
+                  color: 'var(--text)', minHeight: '120px', outline: 'none',
+                  fontSize: '0.9rem', lineHeight: 1.5,
+                  transition: 'all 0.3s ease'
+                }}
+                className="custom-textarea"
               />
               <button 
                 onClick={startVoiceTriage}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: isListening ? 'var(--error)' : 'transparent', border: 'none', color: isListening ? 'white' : 'var(--primary)', padding: '0.5rem', borderRadius: '50%', cursor: 'pointer' }}
+                style={{ position: 'absolute', right: '12px', bottom: '15px', background: isListening ? 'var(--error)' : 'var(--background)', border: 'none', color: isListening ? 'white' : 'var(--primary)', padding: '0.6rem', borderRadius: '50%', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {isListening ? <MicOff size={20} /> : <Mic size={20} />}
               </button>
             </div>
+            
             <button 
               onClick={() => handleAiAnalysis()}
               disabled={aiState === 'analyzing'}
               className="glow-on-hover"
-              style={{ padding: '0 2.5rem', background: 'var(--primary)', color: 'white', borderRadius: '15px', fontWeight: 700 }}
+              style={{ width: '100%', padding: '1.25rem', background: 'var(--primary)', color: 'white', borderRadius: '12px', fontWeight: 800, fontSize: '0.95rem' }}
             >
-              {aiState === 'analyzing' ? 'Analyzing...' : t('analyze')}
+              {aiState === 'analyzing' ? 'Processing Bio-Signals...' : 'Analyze Symptoms'}
             </button>
-          </div>
 
-          <AnimatePresence>
-            {aiState === 'result' && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '2rem', background: aiResult.urgency === 'critical' ? '#fff1f2' : 'rgba(14, 165, 233, 0.05)', borderRadius: '20px', border: `1px solid ${aiResult.urgency === 'critical' ? 'var(--error)' : 'var(--primary-light)'}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <AlertCircle color={aiResult.urgency === 'critical' ? 'var(--error)' : 'var(--primary)'} />
-                  <h4 style={{ fontWeight: 800, fontSize: '1.25rem', color: aiResult.urgency === 'critical' ? 'var(--error)' : 'var(--primary-dark)' }}>
-                    {aiResult.urgency === 'critical' ? 'CRITICAL EMERGENCY' : 'Analysis Complete'}
-                  </h4>
-                </div>
-                <p style={{ lineHeight: 1.6, fontSize: '1.1rem', marginBottom: '1.5rem' }}>{aiResult.suggestion}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'white', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <Lock size={16} color="#22c55e" /> Immutable Chain ID: {aiResult.blockchainId}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+              {aiState === 'result' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '1.5rem', background: aiResult.urgency === 'critical' ? 'rgba(239, 68, 68, 0.05)' : 'var(--surface)', borderRadius: '15px', border: `1px solid ${aiResult.urgency === 'critical' ? 'var(--error)' : 'var(--primary)'}`, boxShadow: `0 10px 30px ${aiResult.urgency === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(14, 165, 233, 0.1)'}` }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: aiResult.urgency === 'critical' ? 'var(--error)' : 'var(--primary)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                     <AlertCircle size={14} /> AI Diagnostic Suggestion
+                   </div>
+                  <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text)' }}>{aiResult.suggestion}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
       {aiResult?.urgency === 'critical' && <div style={{ marginBottom: '2rem' }}><GeoResponder patientLat={location?.lat} patientLng={location?.lng} /></div>}
 
-      <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>National Geospatial Response Grid</h3>
+      <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '2rem', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', color: 'var(--text)' }}>National Geospatial Response Grid</h3>
         <div style={{ height: '500px', borderRadius: '20px', overflow: 'hidden' }}>
           <LiveGridMap 
             center={location ? [location.lat, location.lng] : [20.5937, 78.9629]} 
@@ -456,13 +483,55 @@ const PatientDashboard = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-        <AIVisionScanner />
+        <div className="glass-card" style={{ padding: '2rem', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+            <button 
+              onClick={handleSeedData}
+              disabled={loading}
+              className="glass-card" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.5rem', border: '1px solid var(--primary)', background: 'var(--primary)10', color: 'var(--primary)', fontWeight: 800, transition: 'all 0.3s ease' }}
+            >
+              <RefreshCw size={20} className={loading ? 'spin' : ''} /> {loading ? 'Syncing...' : 'Sync Demo Data'}
+            </button>
+            <button onClick={() => setShowModal(true)} className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.5rem', border: '1px solid var(--border)', fontWeight: 800, transition: 'all 0.3s ease' }}>
+              <PlusCircle size={20} color="var(--primary)" /> New Request
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {activeRequests.map(req => (
+              <div key={req.$id} style={{ padding: '1rem', background: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{req.department || 'General'}</span>
+                  <div style={{ 
+                    padding: '0.25rem 0.6rem', 
+                    borderRadius: '20px', 
+                    fontSize: '0.65rem', 
+                    fontWeight: 900,
+                    background: req.status === 'pending' ? 'var(--warning)20' : 'var(--success)20',
+                    color: req.status === 'pending' ? 'var(--warning)' : 'var(--success)',
+                    border: `1px solid ${req.status === 'pending' ? 'var(--warning)' : 'var(--success)'}`
+                  }}>
+                    {req.status.startsWith('accepted_by_') ? 'DOCTOR ASSIGNED' : req.status.toUpperCase()}
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>{req.symptoms.substring(0, 40)}...</p>
+                {req.status.startsWith('accepted_by_') && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--success)10', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--success)' }}>
+                    Assigned to {req.status.replace('accepted_by_', '')}
+                  </div>
+                )}
+              </div>
+            ))}
+            {activeRequests.length === 0 && <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.5 }}>No active requests found.</p>}
+          </div>
+        </div>
         <UniversalHealthGraph />
         <ElysianHologram distressLevel={healthRecord?.status === 'Critical' ? 85 : 12} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '2rem' }}>
         <HealthTimeline events={vitalsHistory} />
+        <ImpactLeaderboard />
         <AIHealthNews />
       </div>
 
@@ -474,17 +543,17 @@ const PatientDashboard = () => {
             <h3 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '2rem' }}>New Consultation</h3>
             <form onSubmit={handleNewRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700 }}>Department</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700 }}>Disease / Condition</label>
                 <select 
-                  value={newRequest.service} 
-                  onChange={(e) => setNewRequest({...newRequest, service: e.target.value})}
-                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}
+                  value={newRequest.disease} 
+                  onChange={(e) => setNewRequest({...newRequest, disease: e.target.value})}
+                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 600 }}
                 >
-                  <option>General Checkup</option>
-                  <option>Cardiology</option>
-                  <option>Neurology</option>
-                  <option>Orthopedics</option>
-                  <option>Pediatrics</option>
+                  <option value="Diabetologist">Endocrinology / Diabetes</option>
+                  <option value="Cardiologist">Cardiology / Heart</option>
+                  <option value="Pulmonologist">Pulmonology / Asthma</option>
+                  <option value="Dermatologist">Dermatology / Skin</option>
+                  <option value="Neurologist">Neurology / Brain</option>
                 </select>
               </div>
               <div>
@@ -494,7 +563,7 @@ const PatientDashboard = () => {
                   value={newRequest.note}
                   onChange={(e) => setNewRequest({...newRequest, note: e.target.value})}
                   placeholder="Describe how you are feeling..."
-                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', minHeight: '120px' }}
+                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', minHeight: '120px', background: 'var(--surface)', color: 'var(--text)' }}
                 />
               </div>
               <div>

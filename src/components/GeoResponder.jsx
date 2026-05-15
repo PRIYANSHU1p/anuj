@@ -27,16 +27,16 @@ const GeoResponder = ({ patientLat = 19.076, patientLng = 72.877 }) => {
   ];
 
   return (
-    <div className="glass-card" style={{ padding: '2rem', background: '#fef2f2', border: '2px solid #f87171' }}>
+    <div className="glass-card" style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.05)', border: '2px solid var(--error)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#991b1b' }}>SOS: Geo-Spatial Dispatch</h3>
-          <p style={{ color: '#b91c1c', opacity: 0.8 }}>Nearest Level-1 Responder Routed</p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--error)' }}>SOS: Geo-Spatial Dispatch</h3>
+          <p style={{ color: 'var(--error)', opacity: 0.8, fontWeight: 600 }}>Nearest Level-1 Responder Routed</p>
         </div>
         <div className="badge badge-error" style={{ animation: 'pulse 1s infinite' }}>Live Tracking</div>
       </div>
 
-      <div style={{ height: '300px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #fecaca' }}>
+      <div style={{ height: '350px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
         <LiveGridMap 
           center={[patientLat, patientLng]} 
           zoom={15} 
@@ -45,16 +45,19 @@ const GeoResponder = ({ patientLat = 19.076, patientLng = 72.877 }) => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '2rem' }}>
-        <div style={{ background: 'white', padding: '1rem', borderRadius: '15px', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.75rem', color: '#b91c1c' }}>Distance</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 900 }}>{distance.toFixed(1)} km</div>
+        <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '15px', textAlign: 'center', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--error)', fontWeight: 800 }}>Distance</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)' }}>{distance.toFixed(1)} km</div>
         </div>
-        <div style={{ background: 'white', padding: '1rem', borderRadius: '15px', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.75rem', color: '#b91c1c' }}>ETA</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 900 }}>{Math.ceil(eta)} min</div>
+        <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: '15px', textAlign: 'center', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--error)', fontWeight: 800 }}>ETA</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)' }}>{Math.ceil(eta)} min</div>
         </div>
-        <button style={{ background: '#991b1b', color: 'white', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Phone size={20} />
+        <button 
+          onClick={() => window.location.href = 'tel:102'}
+          style={{ background: 'var(--error)', color: 'white', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 15px rgba(239, 68, 68, 0.3)', cursor: 'pointer' }}
+        >
+          <Phone size={24} />
         </button>
       </div>
     </div>

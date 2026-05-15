@@ -39,10 +39,11 @@ const AIVisionScanner = () => {
   };
 
   return (
-    <div className="glass-card holographic-card" style={{ padding: '2.5rem', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+    <div className="glass-card" style={{ padding: '2.5rem', background: 'var(--surface)', border: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.05, borderRadius: '50%' }}></div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
         <Microscope size={28} color="var(--primary)" />
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 900 }}>AI Vision Diagnostics</h3>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)' }}>AI Vision Diagnostics</h3>
       </div>
 
       {!file ? (

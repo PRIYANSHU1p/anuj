@@ -15,7 +15,7 @@ const ElysianHologram = ({ distressLevel = 0 }) => {
   const pulseColor = isPanic ? 'rgba(244, 63, 94, 0.6)' : 'rgba(14, 165, 233, 0.4)';
 
   return (
-    <div className="glass-card holographic-card" style={{ 
+    <div className="glass-card" style={{ 
       height: '450px', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -23,8 +23,8 @@ const ElysianHologram = ({ distressLevel = 0 }) => {
       justifyContent: 'center',
       position: 'relative',
       overflow: 'hidden',
-      background: 'rgba(255, 255, 255, 0.4)',
-      border: '1px solid rgba(14, 165, 233, 0.2)'
+      background: 'var(--surface)',
+      border: '1px solid var(--border)'
     }}>
       <div style={{ position: 'absolute', top: '1.5rem', left: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPanic ? 'var(--error)' : '#22c55e', animation: 'pulse 1.5s infinite' }} />
@@ -103,7 +103,7 @@ const ElysianHologram = ({ distressLevel = 0 }) => {
           <span>NEURAL SYNC</span>
           <span>{syncRate}%</span>
         </div>
-        <div style={{ height: '6px', width: '100%', background: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ height: '6px', width: '100%', background: 'var(--background)', borderRadius: '3px', overflow: 'hidden' }}>
           <motion.div animate={{ width: `${syncRate}%` }} style={{ height: '100%', background: 'var(--primary)', boxShadow: '0 0 10px var(--primary)' }} />
         </div>
       </div>

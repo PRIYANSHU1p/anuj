@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const ChatComponent = ({ requestId, otherPartyName, onClose }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef();
 
@@ -46,26 +45,6 @@ const ChatComponent = ({ requestId, otherPartyName, onClose }) => {
     setLoading(false);
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const messageToSend = newMessage;
-    setNewMessage('');
-
-    const { error } = await supabase
-      .from('messages')
-      .insert([{
-        request_id: requestId,
-        sender_id: user.id,
-        content: messageToSend
-      }]);
-
-    if (error) {
-      console.error('Error sending message:', error);
-      setNewMessage(messageToSend);
-    }
-  };
 
   return (
     <motion.div 
@@ -114,18 +93,6 @@ const ChatComponent = ({ requestId, otherPartyName, onClose }) => {
         <div ref={scrollRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-        <input 
-          type="text" 
-          value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
-          placeholder="Type message..." 
-          style={{ flex: 1, padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--background)', border: 'none' }} 
-        />
-        <button type="submit" style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '10px' }}>
-          <Send size={18} />
-        </button>
-      </form>
     </motion.div>
   );
 };

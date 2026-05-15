@@ -96,7 +96,10 @@ export const fetchHealthNews = async () => {
   } catch (e) {
     return [
       { title: 'System Heartbeat: All Medical Nodes Active', tag: 'Live', color: '#22c55e' },
-      { title: 'National Health Grid: SOS Latency Optimized', tag: 'System', color: '#0ea5e9' }
+      { title: 'National Health Grid: SOS Latency Optimized', tag: 'System', color: '#0ea5e9' },
+      { title: 'AI Forecast: Flu activity rising in Northern Regions', tag: 'Alert', color: '#f59e0b' },
+      { title: 'New Tele-Consultation Protocol for Rural Clinics', tag: 'Policy', color: '#8b5cf6' },
+      { title: 'Pharma Chain: Essential drug supplies stabilized', tag: 'Supply', color: '#ec4899' }
     ];
   }
 };

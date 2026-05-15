@@ -2,6 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useTheme } from '../context/ThemeContext';
 
 let DefaultIcon = L.icon({
     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
@@ -12,11 +13,17 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const LiveGridMap = ({ center = [20.5937, 78.9629], zoom = 5, markers = [] }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   return (
     <div style={{ minHeight: '500px', height: '100%', width: '100%', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--border)', position: 'relative' }}>
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={isDark 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          }
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
         {markers.map((m, i) => (

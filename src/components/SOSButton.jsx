@@ -57,7 +57,7 @@ const SOSButton = () => {
         justifyContent: 'center',
         boxShadow: '0 10px 25px rgba(239, 68, 68, 0.4)',
         zIndex: 4500,
-        border: '4px solid white'
+        border: '4px solid var(--surface)'
       }}
     >
       <PhoneCall size={28} />

@@ -5,12 +5,18 @@
   --primary-dark: #0369a1;
   --accent: #c026d3;
   
-  /* Neutral Palette */
+  /* Neutral Palette - Light Mode */
   --background: #f8fafc;
   --surface: #ffffff;
+  --surface-secondary: #f1f5f9;
   --text: #0f172a;
   --text-muted: #64748b;
   --border: #e2e8f0;
+  
+  /* Glassmorphism Refined */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.08);
   
   /* Status Colors */
   --success: #22c55e;
@@ -18,32 +24,17 @@
   --warning: #f59e0b;
   --info: #3b82f6;
   
-  /* Glassmorphism Refined */
-  --glass: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.08);
-  
-  /* Spacing & Radii */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
-  --radius-full: 9999px;
-  
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 1rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
-  
-  /* Transitions */
   --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark Mode Variables */
 [data-theme='dark'] {
   --background: #020617;
   --surface: #0f172a;
+  --surface-secondary: #1e293b;
   --text: #f8fafc;
   --text-muted: #94a3b8;
   --border: #1e293b;

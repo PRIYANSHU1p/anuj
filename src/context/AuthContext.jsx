@@ -17,12 +17,35 @@ export const AuthProvider = ({ children }) => {
       const session = await account.get();
       if (session) {
         // Appwrite stores custom data in 'prefs'
+        let currentPrefs = session.prefs;
+        if (!currentPrefs.role && session.email.includes('medlink.com')) {
+           const email = session.email;
+           const isDoctor = ['sameer', 'anjali', 'karan', 'aditi', 'manish'].some(n => email.startsWith(n));
+           const role = isDoctor ? 'doctor' : 'patient';
+           
+           let spec = 'General Physician';
+           if (email.startsWith('sameer')) spec = 'Cardiologist';
+           if (email.startsWith('anjali')) spec = 'Dermatologist';
+           if (email.startsWith('karan')) spec = 'Neurologist';
+           if (email.startsWith('aditi')) spec = 'Pulmonologist';
+           if (email.startsWith('manish')) spec = 'Diabetologist';
+
+           currentPrefs = { 
+             role, 
+             specialization: spec,
+             experience: isDoctor ? '10' : null,
+             qualification: isDoctor ? 'MD / Specialist' : null
+           };
+           await account.updatePrefs(currentPrefs);
+        }
+
         setUser({
           id: session.$id,
+          $id: session.$id,
           email: session.email,
           full_name: session.name,
-          role: session.prefs?.role || 'patient', // Default to patient
-          ...session.prefs
+          role: currentPrefs.role || 'patient',
+          ...currentPrefs
         });
       }
     } catch (error) {

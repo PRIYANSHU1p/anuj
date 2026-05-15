@@ -87,7 +87,7 @@ const Home = () => {
       </header>
 
       {/* Winning Feature Showcase */}
-      <section style={{ padding: '10rem 0', background: 'white' }}>
+      <section style={{ padding: '10rem 0', background: 'var(--background)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '6rem' }}>
             <h2 style={{ fontSize: '4rem', fontWeight: 900 }}>The <span className="text-gradient">Innovation</span> Stack.</h2>
@@ -109,7 +109,7 @@ const Home = () => {
                 key={i}
                 whileHover={{ y: -10 }}
                 className="glass-card" 
-                style={{ padding: '3rem', border: `1px solid ${feat.color}20`, background: 'rgba(255,255,255,0.5)' }}
+                style={{ padding: '3rem', border: `1px solid ${feat.color}20`, background: 'var(--surface)' }}
               >
                 <div style={{ color: feat.color, marginBottom: '2rem', background: `${feat.color}10`, width: 'fit-content', padding: '1.25rem', borderRadius: '20px' }}>
                   {React.cloneElement(feat.icon, { size: 40 })}
@@ -158,7 +158,7 @@ const Home = () => {
                   key={i}
                   whileHover={{ y: -15, boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}
                   className="glass-card" 
-                  style={{ padding: '2.5rem', textAlign: 'center', background: 'white' }}
+                  style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--surface)' }}
                 >
                   <div style={{ color: card.color, marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
                     {React.cloneElement(card.icon, { size: 48 })}

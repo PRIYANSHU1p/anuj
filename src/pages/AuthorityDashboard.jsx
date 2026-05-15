@@ -119,7 +119,8 @@ const AuthorityDashboard = () => {
           { label: 'Avg. Response Time', value: '2.4m', color: 'var(--error)', icon: <Clock />, badge: 'Optimized' },
           { label: 'System Integrity', value: '100%', color: 'var(--accent)', icon: <ShieldCheck />, badge: 'Encrypted' }
         ].map((stat, i) => (
-          <div key={i} className="glass-card" style={{ padding: '2rem', border: `1px solid ${stat.color}20` }}>
+          <div key={i} className="glass-card" style={{ padding: '2rem', border: `1px solid ${stat.color}20`, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: stat.color }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
               <div style={{ color: stat.color, background: `${stat.color}10`, padding: '0.75rem', borderRadius: '12px' }}>
                 {React.cloneElement(stat.icon, { size: 24 })}
@@ -132,6 +133,21 @@ const AuthorityDashboard = () => {
             <div style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.8rem' }}>{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '3rem', border: '1px solid var(--border)', background: 'var(--primary)05', display: 'flex', justifyContent: 'center', gap: '3rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', fontWeight: 800 }}>
+          <div style={{ width: '10px', height: '100%', background: 'var(--success)' }} /> 
+          DATABASE: <span style={{ color: 'var(--success)' }}>CONNECTED</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', fontWeight: 800 }}>
+          <Activity size={16} color="var(--primary)" /> 
+          COLLECTIONS: <span style={{ color: 'var(--primary)' }}>INITIALIZED</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', fontWeight: 800 }}>
+          <ShieldCheck size={16} color="var(--accent)" /> 
+          SECURITY: <span style={{ color: 'var(--accent)' }}>AES-256 ACTIVE</span>
+        </div>
       </div>
 
 
@@ -197,12 +213,12 @@ const AuthorityDashboard = () => {
                         <span className="badge badge-primary">{req.department}</span>
                       </td>
                       <td style={{ padding: '1.25rem', fontSize: '0.8rem' }}>
-                        {new Date(req.created_at).toLocaleTimeString()}
+                        {new Date(req.$createdAt).toLocaleTimeString()}
                       </td>
                       <td style={{ padding: '1.25rem', borderRadius: '0 15px 15px 0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--error)', fontWeight: 800, fontSize: '0.8rem' }}>
-                          <div style={{ width: '8px', height: '8px', background: 'var(--error)', borderRadius: '50%', animation: 'pulse 1s infinite' }} />
-                          PENDING
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: req.status.startsWith('accepted_by_') ? 'var(--success)' : 'var(--error)', fontWeight: 800, fontSize: '0.8rem' }}>
+                          <div style={{ width: '8px', height: '8px', background: req.status.startsWith('accepted_by_') ? 'var(--success)' : 'var(--error)', borderRadius: '50%', animation: req.status.startsWith('accepted_by_') ? 'none' : 'pulse 1s infinite' }} />
+                          {req.status.startsWith('accepted_by_') ? 'ASSIGNED' : 'PENDING'}
                         </div>
                       </td>
                     </motion.tr>

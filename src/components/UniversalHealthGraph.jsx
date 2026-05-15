@@ -33,7 +33,7 @@ const UniversalHealthGraph = () => {
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Universal Health Graph</h3>
       </div>
 
-      <div style={{ position: 'relative', height: '300px', width: '100%', background: 'rgba(0,0,0,0.02)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+      <div style={{ position: 'relative', height: '300px', width: '100%', background: 'var(--surface-secondary)', borderRadius: '20px', border: '1px solid var(--border)' }}>
         <svg width="100%" height="100%" viewBox="0 0 300 300" style={{ overflow: 'visible' }}>
           {/* Connecting Lines */}
           {nodes.filter(n => n.id !== 'patient').map(node => (
@@ -58,11 +58,11 @@ const UniversalHealthGraph = () => {
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ type: 'spring', damping: 12, stiffness: 200, delay: node.id === 'patient' ? 0 : 0.5 }}
             >
-              <circle cx={node.x} cy={node.y} r="25" fill="white" stroke={node.color} strokeWidth="2" />
+              <circle cx={node.x} cy={node.y} r="25" fill="var(--surface)" stroke={node.color} strokeWidth="2" />
               <foreignObject x={node.x - 12} y={node.y - 12} width="24" height="24" style={{ color: node.color }}>
                 {node.icon}
               </foreignObject>
-              <text x={node.x} y={node.y + 40} textAnchor="middle" style={{ fontSize: '10px', fontWeight: 800, fill: 'var(--text)' }}>
+              <text x={node.x} y={node.y + 45} textAnchor="middle" style={{ fontSize: '11px', fontWeight: 900, fill: 'var(--text)' }}>
                 {node.label}
               </text>
             </motion.g>

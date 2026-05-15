@@ -48,8 +48,8 @@ const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95
           position: 'relative', 
           zIndex: 2, 
           textAlign: 'center',
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)',
+          background: 'var(--surface)',
+          backdropFilter: 'blur(20px)',
           padding: '1.5rem',
           borderRadius: '50%',
           width: '160px',
@@ -58,8 +58,8 @@ const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          border: `1px solid ${color}`,
-          boxShadow: `0 20px 40px ${color}20`
+          border: `2px solid ${color}40`,
+          boxShadow: `0 0 30px ${color}15, inset 0 0 20px ${color}10`
         }}>
           <motion.div
             animate={{ scale: [1, 1.1, 1] }}
@@ -73,7 +73,7 @@ const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95
             {status}
           </div>
           {heartRate > 0 && (
-            <div style={{ position: 'absolute', bottom: '-10px', background: 'var(--error)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <div style={{ position: 'absolute', bottom: '-5px', background: 'var(--error)', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}>
               <Zap size={10} fill="white" /> {heartRate} BPM
             </div>
           )}
@@ -82,13 +82,13 @@ const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95
 
       {/* Vital Metrics Grid (No Overlap) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%' }}>
-        <div className="glass-card" style={{ padding: '1rem', textAlign: 'center', background: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Blood Pressure</div>
-          <div style={{ fontWeight: 800, color: 'var(--text)' }}>{bp}</div>
+        <div className="glass-card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--background)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 700 }}>Blood Pressure</div>
+          <div style={{ fontWeight: 900, color: 'var(--text)', fontSize: '1.1rem' }}>{bp}</div>
         </div>
-        <div className="glass-card" style={{ padding: '1rem', textAlign: 'center', background: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Blood Sugar</div>
-          <div style={{ fontWeight: 800, color: 'var(--text)' }}>{sugar}</div>
+        <div className="glass-card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--background)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 700 }}>Blood Sugar</div>
+          <div style={{ fontWeight: 900, color: 'var(--text)', fontSize: '1.1rem' }}>{sugar}</div>
         </div>
       </div>
     </div>
