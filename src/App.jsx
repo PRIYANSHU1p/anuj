@@ -37,6 +37,10 @@ const Notification = ({ message, type = 'info', onClose }) => (
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user, loading } = useAuth();
+  useEffect(() => {
+    if (user) console.log("CURRENT USER ROLE:", user.role);
+  }, [user]);
+  
   if (loading) return <div className="loader"></div>;
   if (!user) return <Navigate to="/login" />;
   if (allowedRole && user.role !== allowedRole) return <Navigate to="/" />;

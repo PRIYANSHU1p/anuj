@@ -48,7 +48,7 @@ const DoctorDashboard = () => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
           fetchRequests();
         }
-        if (response.events.includes('databases.*.collections.*.documents.*.update')) {
+        if (response.events.some(e => e.includes('.create') || e.includes('.update'))) {
           fetchRequests();
         }
       }
@@ -70,7 +70,7 @@ const DoctorDashboard = () => {
       
       // Filter for pending or those assigned to this doctor
       const relevant = response.documents.filter(r => 
-        r.status === 'pending' || r.doctor_id === user.id
+        r.status === 'pending' || r.doctor_id === user?.$id
       );
 
       // Sort by urgency: Critical first
@@ -87,7 +87,7 @@ const DoctorDashboard = () => {
     try {
       await databases.updateDocument(DATABASE_ID, COLLECTION_REQUESTS, id, {
         status: 'accepted',
-        doctor_id: user.id
+        doctor_id: user?.$id
       });
       fetchRequests();
     } catch (error) {
@@ -125,7 +125,8 @@ const DoctorDashboard = () => {
   };
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
-  const myAppointments = requests.filter(r => r.status === 'accepted' && r.doctor_id === user.id);
+  const myAppointments = requests.filter(r => r.status === 'accepted' && r.doctor_id === user?.$id);
+  const activeEmergency = requests.find(r => r.type === 'emergency' && r.status === 'pending');
   
   return (
     <div style={{ paddingTop: '8rem', paddingBottom: '4rem' }} className="container">
@@ -187,11 +188,11 @@ const DoctorDashboard = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
         <div>
           <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
-            {t('doctor')} Portal: <span className="text-gradient">{user.full_name}</span>
+            {t('doctor')} Portal: <span className="text-gradient">{user?.full_name}</span>
           </motion.h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <span className="badge badge-success">Available</span>
-            <p style={{ color: 'var(--text-muted)' }}>Verified Pro • License: {user.license_number || 'Verifying'}</p>
+            <p style={{ color: 'var(--text-muted)' }}>Verified Pro • License: {user?.license_number || 'Verifying'}</p>
           </div>
         </div>
       </div>
@@ -202,13 +203,18 @@ const DoctorDashboard = () => {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '2.5rem' }}>Priority Triage Queue</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {pendingRequests.map(r => (
-                <div key={r.id} className="glass-card" style={{ padding: '1.5rem', borderLeft: `6px solid var(--${r.urgency_level === 'critical' ? 'error' : 'primary'})` }}>
+                <div key={r.$id} className="glass-card" style={{ padding: '1.5rem', borderLeft: `6px solid var(--${r.urgency === 'critical' ? 'error' : 'primary'})` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: 800 }}>{r.patient?.full_name}</div>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{r.service} • {r.urgency_level.toUpperCase()}</p>
+                      <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{r.patient_name || 'Anonymous Patient'}</div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                        {r.department || 'General'} • {r.urgency?.toUpperCase() || 'NORMAL'}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', opacity: 0.6, fontStyle: 'italic' }}>
+                        "{r.symptoms?.substring(0, 50)}..."
+                      </p>
                     </div>
-                    <button onClick={() => handleAccept(r.id)} className="glow-on-hover" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: 'white', borderRadius: '10px' }}>Accept</button>
+                    <button onClick={() => handleAccept(r.$id)} className="glow-on-hover" style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: 'white', borderRadius: '10px' }}>Accept</button>
                   </div>
                 </div>
               ))}
@@ -220,7 +226,7 @@ const DoctorDashboard = () => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {requests.find(r => r.type === 'emergency' && r.status === 'pending') && (
+          {activeEmergency && (
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -235,23 +241,26 @@ const DoctorDashboard = () => {
                 <div className="badge badge-error">CRITICAL</div>
               </div>
               <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 600 }}>
-                Patient {requests.find(r => r.type === 'emergency' && r.status === 'pending')?.patient?.full_name} reports severe distress. Dispatch protocols active.
-              </p>
+                Patient {activeEmergency.patient_name} reports severe distress. Dispatch protocols active.
               <div style={{ height: '400px', borderRadius: '15px', overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <LiveGridMap 
-                  center={requests.find(r => r.type === 'emergency' && r.status === 'pending')?.location?.split(',').map(Number) || [20.5937, 78.9629]} 
+                  center={activeEmergency.location?.split(',').map(Number) || [20.5937, 78.9629]} 
                   zoom={14} 
-                  markers={[{
-                    position: requests.find(r => r.type === 'emergency' && r.status === 'pending')?.location?.split(',').map(Number) || [20.5937, 78.9629],
-                    label: "Critical Patient",
-                    urgency: 'critical'
-                  }]} 
+                  markers={
+                    activeEmergency.location && !activeEmergency.location.includes('Denied') 
+                    ? [{ 
+                        position: activeEmergency.location.split(',').map(Number), 
+                        label: activeEmergency.patient_name || 'Emergency Patient', 
+                        urgency: 'critical' 
+                      }] 
+                    : []
+                  }
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button 
-                  onClick={() => handleAccept(requests.find(r => r.type === 'emergency' && r.status === 'pending').$id)}
+                  onClick={() => handleAccept(activeEmergency.$id)}
                   style={{ flex: 1, background: 'var(--error)', color: 'white', padding: '0.75rem', borderRadius: '10px', fontWeight: 800 }}
                 >
                   ACCEPT & DISPATCH
@@ -264,18 +273,18 @@ const DoctorDashboard = () => {
           <div className="glass-card" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Consultation Center</h3>
-              {activeChat && <div className="badge badge-primary">Active: {activeChat.patient?.full_name}</div>}
+              {activeChat && <div className="badge badge-primary">Active: {activeChat.patient_name}</div>}
             </div>
 
-            {activeChat && <ClinicalBrief patientName={activeChat.patient?.full_name} />}
+            {activeChat && <ClinicalBrief patientName={activeChat.patient_name} />}
             
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {myAppointments.map(app => (
-                <div key={app.id} className="glass-card" style={{ padding: '1.25rem', background: app.id === activeChat?.id ? 'var(--primary-light)' : 'var(--background)' }}>
+                <div key={app.$id} className="glass-card" style={{ padding: '1.25rem', background: app.$id === activeChat?.$id ? 'var(--primary-light)' : 'var(--background)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: 700 }}>{app.patient?.full_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{app.service}</div>
+                      <div style={{ fontWeight: 700 }}>{app.patient_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{app.department}</div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => { setSelectedRequest(app); setShowPrescriptionModal(true); }} style={{ padding: '0.5rem', background: 'white', border: '1px solid var(--border)', borderRadius: '8px' }}><FileText size={18} /></button>
@@ -300,7 +309,7 @@ const DoctorDashboard = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
                   { time: '08:00', load: 2 }, { time: '10:00', load: 4 }, 
-                  { time: '12:00', load: 8 }, { time: '14:00', load: 5 }, 
+                  { label: "Dr. Aryan Sharma (You)", impact: 1420, saved: 45 },
                   { time: '16:00', load: myAppointments.length }
                 ]}>
                   <Bar dataKey="load" radius={[4, 4, 0, 0]}>
@@ -326,7 +335,7 @@ const DoctorDashboard = () => {
       <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 5000 }}>
         <AnimatePresence>
           {activeChat && (
-            <ChatComponent requestId={activeChat.id} otherPartyName={activeChat.patient?.full_name || 'Patient'} onClose={() => setActiveChat(null)} />
+            <ChatComponent requestId={activeChat.$id} otherPartyName={activeChat.patient_name || 'Patient'} onClose={() => setActiveChat(null)} />
           )}
         </AnimatePresence>
       </div>

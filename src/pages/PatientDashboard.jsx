@@ -36,7 +36,7 @@ const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [requests, setRequests] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newRequest, setNewRequest] = useState({ service: 'General Checkup', note: '', urgency_level: 'low', abha_id: '' });
+  const [newRequest, setNewRequest] = useState({ service: 'General Checkup', note: '', urgency: 'low', abha_id: '' });
   const [isListening, setIsListening] = useState(false);
   const [symptoms, setSymptoms] = useState('');
   const [heartRate, setHeartRate] = useState(0);
@@ -145,6 +145,31 @@ const PatientDashboard = () => {
     };
     recognition.start();
   };
+  
+  const handleNewRequest = async (e) => {
+    e.preventDefault();
+    if (!user?.$id) return;
+    setLoading(true);
+    try {
+      await databases.createDocument(DATABASE_ID, COLLECTION_REQUESTS, ID.unique(), {
+        patient_id: user.$id,
+        patient_name: user.full_name,
+        department: newRequest.service,
+        symptoms: newRequest.note,
+        urgency: newRequest.urgency,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+      setShowModal(false);
+      setNewRequest({ service: 'General Checkup', note: '', urgency: 'low', abha_id: '' });
+      alert("Request Submitted Successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit request.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAiAnalysis = async (customSymptom = null) => {
     const input = customSymptom || symptoms || document.getElementById('symptomInput')?.value;
@@ -245,9 +270,12 @@ const PatientDashboard = () => {
              <Watch size={20} />
              {isWatchConnected ? 'Watch Active' : 'Connect Smart Watch'}
            </button>
-           <button onClick={isNeuralListening ? stopAnalysis : startAnalysis} className="glass-card" style={{ padding: '1rem 2rem', background: isNeuralListening ? 'var(--error)' : 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px' }}>
-             {isNeuralListening ? 'Stop Neural Sync' : 'Start Neural Sync'}
-           </button>
+            <button onClick={() => setShowModal(true)} className="glass-card" style={{ padding: '1rem 2rem', background: 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <PlusCircle size={20} /> Request Appointment
+            </button>
+            <button onClick={isNeuralListening ? stopAnalysis : startAnalysis} className="glass-card" style={{ padding: '1rem 2rem', background: isNeuralListening ? 'var(--error)' : 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px' }}>
+              {isNeuralListening ? 'Stop Neural Sync' : 'Start Neural Sync'}
+            </button>
         </div>
       </header>
 
@@ -343,14 +371,19 @@ const PatientDashboard = () => {
                   </div>
                 </div>
 
-                {/* Floating Metrics (Holographic) */}
+                {/* Floating Metrics (Holographic) linked to Watch */}
                 <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '-10%', right: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: '1px solid rgba(14, 165, 233, 0.2)', backdropFilter: 'blur(10px)', textAlign: 'left' }}>
                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>SPO2</div>
-                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0ea5e9' }}>98%</div>
+                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0ea5e9' }}>
+                     {isWatchConnected ? (97 + (heartRate % 3)) : '98'}%
+                   </div>
                 </motion.div>
-                <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '0%', left: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: '1px solid rgba(192, 38, 211, 0.2)', backdropFilter: 'blur(10px)', textAlign: 'left' }}>
+                
+                <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '0%', left: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: `1px solid ${heartRate > 100 ? 'var(--error)' : 'rgba(192, 38, 211, 0.2)'}`, backdropFilter: 'blur(10px)', textAlign: 'left' }}>
                    <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>STRESS</div>
-                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#c026d3' }}>Low</div>
+                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: heartRate > 100 ? 'var(--error)' : '#c026d3' }}>
+                     {heartRate === 0 ? 'Normal' : (heartRate > 100 ? 'High' : 'Low')}
+                   </div>
                 </motion.div>
               </div>
             </div>
@@ -434,6 +467,66 @@ const PatientDashboard = () => {
       </div>
 
 
+      {/* Request Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem' }}>
+            <h3 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '2rem' }}>New Consultation</h3>
+            <form onSubmit={handleNewRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700 }}>Department</label>
+                <select 
+                  value={newRequest.service} 
+                  onChange={(e) => setNewRequest({...newRequest, service: e.target.value})}
+                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}
+                >
+                  <option>General Checkup</option>
+                  <option>Cardiology</option>
+                  <option>Neurology</option>
+                  <option>Orthopedics</option>
+                  <option>Pediatrics</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700 }}>Symptoms / Notes</label>
+                <textarea 
+                  required
+                  value={newRequest.note}
+                  onChange={(e) => setNewRequest({...newRequest, note: e.target.value})}
+                  placeholder="Describe how you are feeling..."
+                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', minHeight: '120px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700 }}>Urgency</label>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  {['low', 'medium', 'high'].map(u => (
+                    <button 
+                      key={u}
+                      type="button"
+                      onClick={() => setNewRequest({...newRequest, urgency: u})}
+                      style={{ 
+                        flex: 1, padding: '0.75rem', borderRadius: '10px', textTransform: 'capitalize', fontWeight: 700,
+                        background: newRequest.urgency === u ? 'var(--primary)' : 'var(--surface)',
+                        color: newRequest.urgency === u ? 'white' : 'var(--text)',
+                        border: '1px solid var(--border)'
+                      }}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '1rem', borderRadius: '12px', fontWeight: 700, background: 'var(--surface)', border: '1px solid var(--border)' }}>Cancel</button>
+                <button type="submit" disabled={loading} style={{ flex: 1, padding: '1rem', borderRadius: '12px', fontWeight: 700, background: 'var(--primary)', color: 'white', border: 'none' }}>
+                  {loading ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
