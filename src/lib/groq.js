@@ -27,7 +27,7 @@ export const analyzeSymptoms = async (symptomsInput) => {
         messages: [
           {
             role: "system",
-            content: `You are MedLink AI. Analyze symptoms and return a JSON object: 
+            content: `You are MedLink AI. Analyze symptoms and return a valid JSON object: 
             { "urgency": "critical"|"medium"|"low", "suggestion": "...", "department": "..." }.`
           },
           {
@@ -40,6 +40,13 @@ export const analyzeSymptoms = async (symptomsInput) => {
     });
 
     const data = await response.json();
+    console.log("MedLink AI Raw Output:", data);
+    
+    if (data.error) {
+      console.error("Groq API Error:", data.error.message);
+      return fallbackAnalysis(symptoms);
+    }
+    
     return JSON.parse(data.choices[0].message.content);
   } catch (error) {
     console.error("AI Analysis failed:", error);
