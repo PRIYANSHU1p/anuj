@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }) => {
         role: metadata.role,
         full_name: metadata.full_name,
         license_number: metadata.license_number || null,
+        abha_id: metadata.abha_id || null,
         created_at: new Date().toISOString()
       });
 

@@ -13,12 +13,13 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    full_name: '',
-    license_number: ''
-  });
+   const [formData, setFormData] = useState({
+     email: '',
+     password: '',
+     full_name: '',
+     license_number: '',
+     abha_id: ''
+   });
   
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -27,11 +28,12 @@ const Login = () => {
     
     try {
       if (isRegister) {
-        await signUp(formData.email, formData.password, {
-          full_name: formData.full_name,
-          role: role,
-          license_number: role === 'doctor' ? formData.license_number : null
-        });
+         await signUp(formData.email, formData.password, {
+           full_name: formData.full_name,
+           role: role,
+           license_number: role === 'doctor' ? formData.license_number : null,
+           abha_id: role === 'patient' ? formData.abha_id : null
+         });
         setSuccess(true);
         setTimeout(() => {
           setIsRegister(false);
@@ -140,6 +142,16 @@ const Login = () => {
                           <div style={{ position: 'relative' }}>
                             <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input type="text" name="license_number" value={formData.license_number} onChange={handleChange} placeholder="MCI-123456" style={{ width: '100%', paddingLeft: '3rem' }} required />
+                          </div>
+                        </div>
+                      )}
+
+                      {role === 'patient' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>ABHA ID (NATIONAL HEALTH ID)</label>
+                          <div style={{ position: 'relative' }}>
+                            <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input type="text" name="abha_id" value={formData.abha_id} onChange={handleChange} placeholder="12-3456-7890-1234" style={{ width: '100%', paddingLeft: '3rem' }} required />
                           </div>
                         </div>
                       )}

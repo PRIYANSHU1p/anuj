@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Map as MapIcon, Activity, Users, AlertCircle, ShieldCheck, Download, Filter, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { supabase } from '../supabaseClient';
 import { databases, DATABASE_ID, COLLECTION_REQUESTS, client } from '../lib/appwrite';
 import NetworkSlicingUI from '../components/NetworkSlicingUI';
 import QuantumMesh from '../components/QuantumMesh';
@@ -24,10 +23,29 @@ const AuthorityDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const playEmergencySiren = () => {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.5);
+    oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 1);
+    
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 1);
+  };
+
   useEffect(() => {
     fetchRequests();
 
-    // REAL-TIME SUBSCRIPTION: The core of the National Health Grid
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTION_REQUESTS}.documents`, 
       response => {
@@ -36,9 +54,7 @@ const AuthorityDashboard = () => {
           setRequests(prev => [newRequest, ...prev]);
           setStats(prev => ({ ...prev, criticalCases: prev.criticalCases + 1 }));
           
-          // Sound alert for critical SOS
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.play().catch(e => console.log('Audio play blocked'));
+          playEmergencySiren();
         }
       }
     );

@@ -9,6 +9,9 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { analyzeSymptoms } from '../lib/groq';
+import { databases, DATABASE_ID, COLLECTION_REQUESTS } from '../lib/appwrite';
+import { ID } from 'appwrite';
 import ChatComponent from '../components/ChatComponent';
 import DigitalTwin from '../components/DigitalTwin';
 import KarmaMeter from '../components/KarmaMeter';
@@ -19,9 +22,6 @@ import AIVisionScanner from '../components/AIVisionScanner';
 import UniversalHealthGraph from '../components/UniversalHealthGraph';
 import ElysianHologram from '../components/ElysianHologram';
 import { useEmotionAI } from '../hooks/useEmotionAI';
-import { analyzeSymptoms } from '../lib/groq';
-import { databases, DATABASE_ID, COLLECTION_REQUESTS } from '../lib/appwrite';
-import { ID } from 'appwrite';
 
 
 
@@ -102,6 +102,12 @@ const PatientDashboard = () => {
 
       // If critical, automatically save to Appwrite Database for Authorities
       if (enrichedResult.urgency === 'critical') {
+        let location = 'GPS Denied';
+        try {
+          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+          location = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+        } catch (e) { console.warn("GPS failed"); }
+
         await databases.createDocument(
           DATABASE_ID,
           COLLECTION_REQUESTS,
@@ -113,7 +119,7 @@ const PatientDashboard = () => {
             urgency: 'critical',
             suggestion: enrichedResult.suggestion,
             department: enrichedResult.department,
-            location: 'Assigned via GeoResponder', // Would integrate with real GPS in production
+            location: location,
             status: 'pending',
             created_at: new Date().toISOString()
           }
