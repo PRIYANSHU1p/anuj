@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, TrendingUp, DollarSign, Clock, Users, CheckCircle2, ChevronRight, Map as MapIcon, ShieldCheck, AlertTriangle, FileText, Send, Plus, Trash2, MessageSquare, X, Phone } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { databases, DATABASE_ID, COLLECTION_REQUESTS, client } from '../lib/appwrite';
-import { Query } from 'appwrite';
+import { Query, ID } from 'appwrite';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import ChatComponent from '../components/ChatComponent';
@@ -68,6 +68,12 @@ const DoctorDashboard = () => {
         ]
       );
       
+      if (response.documents.length === 0) {
+        console.log("Database empty. Seeding demo data...");
+        await seedDemoData();
+        return; // seedDemoData will trigger another fetch
+      }
+      
       // Filter for pending or those assigned to this doctor
       const relevant = response.documents.filter(r => 
         r.status === 'pending' || r.doctor_id === user?.$id
@@ -80,6 +86,28 @@ const DoctorDashboard = () => {
       console.error('Fetch requests failed:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const seedDemoData = async () => {
+    const demoRequests = [
+      { patient_name: "Rahul Mehra", department: "Cardiology", symptoms: "Severe chest pain and shortness of breath", urgency: "critical", location: "28.6139, 77.2090" },
+      { patient_name: "Sneha Kapoor", department: "Trauma", symptoms: "Road accident near highway, bleeding from head", urgency: "critical", location: "19.0760, 72.8777" },
+      { patient_name: "Amit Patel", department: "General", symptoms: "High grade fever (103F) since 3 days", urgency: "medium", location: "12.9716, 77.5946" },
+      { patient_name: "Priya Sharma", department: "Pediatrics", symptoms: "Toddler having continuous seizures", urgency: "critical", location: "22.5726, 88.3639" }
+    ];
+
+    try {
+      for (const req of demoRequests) {
+        await databases.createDocument(DATABASE_ID, COLLECTION_REQUESTS, ID.unique(), {
+          ...req,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+      }
+      fetchRequests();
+    } catch (err) {
+      console.error("Seeding failed:", err);
     }
   };
 
@@ -242,6 +270,7 @@ const DoctorDashboard = () => {
               </div>
               <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 600 }}>
                 Patient {activeEmergency.patient_name} reports severe distress. Dispatch protocols active.
+              </p>
               <div style={{ height: '400px', borderRadius: '15px', overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <LiveGridMap 
                   center={activeEmergency.location?.split(',').map(Number) || [20.5937, 78.9629]} 
@@ -309,7 +338,7 @@ const DoctorDashboard = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
                   { time: '08:00', load: 2 }, { time: '10:00', load: 4 }, 
-                  { label: "Dr. Aryan Sharma (You)", impact: 1420, saved: 45 },
+                  { time: '12:00', load: 3 }, { time: '14:00', load: 2 },
                   { time: '16:00', load: myAppointments.length }
                 ]}>
                   <Bar dataKey="load" radius={[4, 4, 0, 0]}>

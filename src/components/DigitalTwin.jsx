@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Activity, ShieldAlert, Heart, Zap } from 'lucide-react';
 
-const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95 mg/dL' }) => {
+const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95 mg/dL', heartRate = 72 }) => {
   // Determine color based on score
   const color = score > 80 ? '#22c55e' : score > 50 ? '#f59e0b' : '#ef4444';
   
@@ -72,6 +72,11 @@ const DigitalTwin = ({ score = 85, status = 'Stable', bp = '120/80', sugar = '95
           <div style={{ fontSize: '0.75rem', fontWeight: 800, color: color, textTransform: 'uppercase', marginTop: '0.25rem' }}>
             {status}
           </div>
+          {heartRate > 0 && (
+            <div style={{ position: 'absolute', bottom: '-10px', background: 'var(--error)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <Zap size={10} fill="white" /> {heartRate} BPM
+            </div>
+          )}
         </div>
       </div>
 
