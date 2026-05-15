@@ -2,14 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Circle, CheckCircle2, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 
-const HealthTimeline = () => {
-  const events = [
+const HealthTimeline = ({ events: propEvents }) => {
+  const defaultEvents = [
     { date: 'Oct 2025', title: 'Surgery: Appendix Removal', type: 'procedure', color: 'var(--primary)' },
     { date: 'Jan 2026', title: 'Critical SOS: BP Spike', type: 'emergency', color: 'var(--error)' },
     { date: 'Mar 2026', title: 'Lab: Lipid Profile Normal', type: 'lab', color: '#22c55e' },
-    { date: 'May 2026', title: 'Consultation: General Checkup', type: 'consult', color: 'var(--accent)' },
-    { date: 'July 2026', title: 'AI Analysis: High Stress Streak', type: 'ai', color: '#8b5cf6' },
   ];
+  
+  const events = propEvents && propEvents.length > 0 ? propEvents : defaultEvents;
 
   return (
     <div className="glass-card" style={{ padding: '2rem' }}>

@@ -3,13 +3,9 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default Leaflet icon markers in React
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
 let DefaultIcon = L.icon({
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
     iconSize: [25, 41],
     iconAnchor: [12, 41]
 });
@@ -17,7 +13,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const LiveGridMap = ({ center = [20.5937, 78.9629], zoom = 5, markers = [] }) => {
   return (
-    <div style={{ height: '100%', width: '100%', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--border)', position: 'relative' }}>
+    <div style={{ minHeight: '500px', height: '100%', width: '100%', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--border)', position: 'relative' }}>
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

@@ -10,8 +10,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { analyzeSymptoms } from '../lib/groq';
-import { databases, DATABASE_ID, COLLECTION_REQUESTS } from '../lib/appwrite';
-import { ID } from 'appwrite';
+import { databases, DATABASE_ID, COLLECTION_REQUESTS, COLLECTION_RECORDS } from '../lib/appwrite';
+import { ID, Query } from 'appwrite';
 import ChatComponent from '../components/ChatComponent';
 import DigitalTwin from '../components/DigitalTwin';
 import KarmaMeter from '../components/KarmaMeter';
@@ -27,15 +27,8 @@ import { useEmotionAI } from '../hooks/useEmotionAI';
 
 
 
-const vitalsData = [
-  { name: 'Mon', bp: 120, sugar: 90 },
-  { name: 'Tue', bp: 118, sugar: 92 },
-  { name: 'Wed', bp: 122, sugar: 88 },
-  { name: 'Thu', bp: 115, sugar: 95 },
-  { name: 'Fri', bp: 121, sugar: 91 },
-];
-
 const PatientDashboard = () => {
+  const [vitalsHistory, setVitalsHistory] = useState([]);
   const { user } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
@@ -48,6 +41,43 @@ const PatientDashboard = () => {
   const [aiResult, setAiResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
+  const [healthRecord, setHealthRecord] = useState(null);
+
+  const fetchHealthRecord = async () => {
+    if (!user?.$id) return;
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTION_RECORDS,
+        [Query.equal('patient_id', user.$id), Query.orderDesc('$createdAt'), Query.limit(10)]
+      );
+      if (response.documents.length > 0) {
+        setHealthRecord(response.documents[0]);
+        setVitalsHistory(response.documents.map(doc => ({
+          name: new Date(doc.$createdAt).toLocaleDateString('en-IN', { weekday: 'short' }),
+          bp: parseInt(doc.bp) || 0,
+          sugar: parseInt(doc.sugar) || 0,
+          date: new Date(doc.$createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+          title: doc.status,
+          type: 'record'
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching health record:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealthRecord();
+  }, [user?.$id]);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => console.warn("Location access denied"),
+      { enableHighAccuracy: true }
+    );
+  }, []);
 
   useEffect(() => {
     // "Hey MedLink" Wake Word Listener (Hands-free SOS)
@@ -109,26 +139,41 @@ const PatientDashboard = () => {
       setAiResult(enrichedResult);
       setAiState('result');
 
+      // 1. Create a Health Record for the Digital Twin
+      try {
+        await databases.createDocument(
+          DATABASE_ID,
+          COLLECTION_RECORDS,
+          ID.unique(),
+          {
+            patient_id: user?.$id,
+            score: enrichedResult.score || 80,
+            status: enrichedResult.status || 'Good',
+            bp: enrichedResult.bp || '120/80',
+            sugar: enrichedResult.sugar || '90 mg/dL',
+            created_at: new Date().toISOString()
+          }
+        );
+        // Refresh UI
+        fetchHealthRecord();
+      } catch (e) { console.error("Health record save failed:", e); }
+
       // If critical, automatically save to Appwrite Database for Authorities
       if (enrichedResult.urgency === 'critical') {
-        let location = 'GPS Denied';
-        try {
-          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-          location = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-        } catch (e) { console.warn("GPS failed"); }
+        const locString = location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : 'GPS Denied';
 
         await databases.createDocument(
           DATABASE_ID,
           COLLECTION_REQUESTS,
           ID.unique(),
           {
-            patient_id: user.id,
-            patient_name: user.full_name,
-            symptoms: input,
+            patient_id: user?.$id,
+            patient_name: user?.full_name,
+            symptoms: input || symptoms,
             urgency: 'critical',
             suggestion: enrichedResult.suggestion,
             department: enrichedResult.department,
-            location: location,
+            location: locString,
             status: 'pending',
             created_at: new Date().toISOString()
           }
@@ -186,8 +231,13 @@ const PatientDashboard = () => {
             </div>
             <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>AI Health Digital Twin</h3>
           </div>
-          <div style={{ height: '300px', minHeight: '300px' }}>
-            <DigitalTwin score={88} status="Excellent" />
+          <div style={{ height: '400px', minHeight: '400px' }}>
+            <DigitalTwin 
+              score={healthRecord?.score || 0} 
+              status={healthRecord?.status || 'Syncing...'} 
+              bp={healthRecord?.bp || 'N/A'}
+              sugar={healthRecord?.sugar || 'N/A'}
+            />
           </div>
         </div>
 
@@ -250,7 +300,7 @@ const PatientDashboard = () => {
 
       <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
         <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>National Geospatial Response Grid</h3>
-        <div style={{ height: '350px', borderRadius: '20px', overflow: 'hidden' }}>
+        <div style={{ height: '500px', borderRadius: '20px', overflow: 'hidden' }}>
           <LiveGridMap 
             center={location ? [location.lat, location.lng] : [20.5937, 78.9629]} 
             zoom={location ? 14 : 5} 
@@ -266,7 +316,7 @@ const PatientDashboard = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-        <HealthTimeline />
+        <HealthTimeline events={vitalsHistory} />
         <AIHealthNews />
       </div>
 

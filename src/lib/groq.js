@@ -23,12 +23,20 @@ export const analyzeSymptoms = async (symptomsInput) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
             content: `You are MedLink AI. Analyze symptoms and return a valid JSON object: 
-            { "urgency": "critical"|"medium"|"low", "suggestion": "...", "department": "..." }.`
+            { 
+              "urgency": "critical"|"medium"|"low", 
+              "suggestion": "...", 
+              "department": "...",
+              "score": <integer 0-100>,
+              "status": "Excellent"|"Good"|"Warning"|"Critical",
+              "bp": "<string e.g. 120/80>",
+              "sugar": "<string e.g. 95 mg/dL>"
+            }.`
           },
           {
             role: "user",
@@ -62,6 +70,10 @@ const fallbackAnalysis = (symptoms) => {
     suggestion: isCritical 
       ? "Immediate intervention required. Dispatching emergency services." 
       : "No immediate life threat. Schedule a consultation soon.",
-    department: isCritical ? "Emergency Medicine" : "General Practice"
+    department: isCritical ? "Emergency Medicine" : "General Practice",
+    score: isCritical ? 25 : 75,
+    status: isCritical ? "Critical" : "Good",
+    bp: isCritical ? "160/100" : "120/80",
+    sugar: isCritical ? "140 mg/dL" : "90 mg/dL"
   };
 };

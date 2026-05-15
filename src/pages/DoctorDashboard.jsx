@@ -237,7 +237,7 @@ const DoctorDashboard = () => {
               <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 600 }}>
                 Patient {requests.find(r => r.type === 'emergency' && r.status === 'pending')?.patient?.full_name} reports severe distress. Dispatch protocols active.
               </p>
-              <div style={{ height: '200px', borderRadius: '15px', overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <div style={{ height: '400px', borderRadius: '15px', overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <LiveGridMap 
                   center={requests.find(r => r.type === 'emergency' && r.status === 'pending')?.location?.split(',').map(Number) || [20.5937, 78.9629]} 
                   zoom={14} 

@@ -8,8 +8,8 @@ const account = new Account(client);
 const databases = new Databases(client);
 
 // Production IDs
-export const DATABASE_ID = "6a0665b10037a3c3066c"; // Assuming standard IDs or user will create them
-export const COLLECTION_REQUESTS = "6a0665ba000d0894e43e";
+export const DATABASE_ID = "medlink_db";
+export const COLLECTION_REQUESTS = "emergency_requests";
 export const COLLECTION_RECORDS = "health_records";
 
 export { client, account, databases };
