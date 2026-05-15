@@ -6,7 +6,10 @@
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-export const analyzeSymptoms = async (symptoms) => {
+export const analyzeSymptoms = async (symptomsInput) => {
+  // 1. Ensure we only process clean strings (prevents Circular Reference crashes)
+  const symptoms = typeof symptomsInput === 'string' ? symptomsInput : String(symptomsInput);
+
   if (!GROQ_API_KEY) {
     console.warn("Groq API key missing. Falling back to local analysis.");
     return fallbackAnalysis(symptoms);
@@ -24,13 +27,8 @@ export const analyzeSymptoms = async (symptoms) => {
         messages: [
           {
             role: "system",
-            content: `You are MedLink AI, a critical triage assistant for a National Health Grid. 
-            Analyze the symptoms provided and return a JSON object with:
-            1. urgency: 'critical' or 'medium' or 'low'
-            2. suggestion: Short, actionable medical advice (max 2 sentences).
-            3. department: Which hospital department should handle this (e.g., Cardiology, ER, General).
-            
-            Be extremely precise. If life-threatening symptoms are mentioned, urgency MUST be 'critical'.`
+            content: `You are MedLink AI. Analyze symptoms and return a JSON object: 
+            { "urgency": "critical"|"medium"|"low", "suggestion": "...", "department": "..." }.`
           },
           {
             role: "user",

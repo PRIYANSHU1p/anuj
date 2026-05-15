@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import ChatComponent from '../components/ChatComponent';
 import ImpactLeaderboard from '../components/ImpactLeaderboard';
 import ClinicalBrief from '../components/ClinicalBrief';
+import LiveGridMap from '../components/LiveGridMap';
 import { checkInteractions } from '../utils/DrugInteractionEngine';
 
 
@@ -236,9 +237,21 @@ const DoctorDashboard = () => {
               <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 600 }}>
                 Patient {requests.find(r => r.type === 'emergency' && r.status === 'pending')?.patient?.full_name} reports severe distress. Dispatch protocols active.
               </p>
+              <div style={{ height: '200px', borderRadius: '15px', overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <LiveGridMap 
+                  center={requests.find(r => r.type === 'emergency' && r.status === 'pending')?.location?.split(',').map(Number) || [20.5937, 78.9629]} 
+                  zoom={14} 
+                  markers={[{
+                    position: requests.find(r => r.type === 'emergency' && r.status === 'pending')?.location?.split(',').map(Number) || [20.5937, 78.9629],
+                    label: "Critical Patient",
+                    urgency: 'critical'
+                  }]} 
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button 
-                  onClick={() => handleAccept(requests.find(r => r.type === 'emergency' && r.status === 'pending').id)}
+                  onClick={() => handleAccept(requests.find(r => r.type === 'emergency' && r.status === 'pending').$id)}
                   style={{ flex: 1, background: 'var(--error)', color: 'white', padding: '0.75rem', borderRadius: '10px', fontWeight: 800 }}
                 >
                   ACCEPT & DISPATCH

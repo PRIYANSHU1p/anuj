@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { databases, DATABASE_ID, COLLECTION_REQUESTS, client } from '../lib/appwrite';
 import NetworkSlicingUI from '../components/NetworkSlicingUI';
 import QuantumMesh from '../components/QuantumMesh';
+import LiveGridMap from '../components/LiveGridMap';
 import { Query } from 'appwrite';
 
 
@@ -77,6 +78,18 @@ const AuthorityDashboard = () => {
       setLoading(false);
     }
   };
+
+  // Convert requests to Map Markers
+  const mapMarkers = requests
+    .filter(r => r.location && r.location.includes(','))
+    .map(r => {
+      const [lat, lng] = r.location.split(',').map(Number);
+      return {
+        position: [lat, lng],
+        urgency: r.urgency,
+        label: `${r.patient_name}: ${r.symptoms.substring(0, 30)}...`
+      };
+    });
   
   return (
     <div style={{ paddingTop: '8rem', paddingBottom: '4rem' }} className="container">
@@ -119,17 +132,8 @@ const AuthorityDashboard = () => {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Disease Outbreak Surveillance</h3>
             <div className="badge badge-primary">Real-time Data</div>
           </div>
-          <div style={{ height: '400px', background: 'rgba(0,0,0,0.02)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', position: 'relative', overflow: 'hidden' }}>
-            {/* Mock Map Visualization */}
-            <div style={{ position: 'absolute', inset: 0, opacity: 0.1, background: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }}></div>
-            <div style={{ textAlign: 'center', zIndex: 2 }}>
-              <MapIcon size={64} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-              <h4 style={{ fontWeight: 800 }}>Heatmap Visualization</h4>
-              <p style={{ color: 'var(--text-muted)' }}>Integrating PostGIS Spatial Data...</p>
-            </div>
-            {/* Pulsing Hotspots */}
-            <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0.2, 0.5] }} transition={{ duration: 3, repeat: Infinity }} style={{ position: 'absolute', top: '30%', left: '40%', width: '100px', height: '100px', background: 'rgba(239, 68, 68, 0.3)', borderRadius: '50%' }} />
-            <motion.div animate={{ scale: [1, 1.8, 1], opacity: [0.4, 0.1, 0.4] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', bottom: '20%', right: '30%', width: '150px', height: '150px', background: 'rgba(14, 165, 233, 0.2)', borderRadius: '50%' }} />
+          <div style={{ height: '400px', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <LiveGridMap markers={mapMarkers} />
           </div>
         </div>
 

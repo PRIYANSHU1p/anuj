@@ -11,6 +11,7 @@ import { useAuth } from './context/AuthContext';
 import SOSButton from './components/SOSButton';
 import ConnectivityMonitor from './components/ConnectivityMonitor';
 import { client } from './lib/appwrite';
+import GridStatus from './components/GridStatus';
 
 const Notification = ({ message, type = 'info', onClose }) => (
 
@@ -103,6 +104,7 @@ function App() {
           <Route path="/patient" element={<Navigate to="/patient-dashboard" />} />
           <Route path="/doctor" element={<Navigate to="/doctor-dashboard" />} />
         </Routes>
+        <GridStatus />
       </div>
     </Router>
   );

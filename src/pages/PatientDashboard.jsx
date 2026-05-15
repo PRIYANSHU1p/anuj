@@ -21,6 +21,7 @@ import HealthTimeline from '../components/HealthTimeline';
 import AIVisionScanner from '../components/AIVisionScanner';
 import UniversalHealthGraph from '../components/UniversalHealthGraph';
 import ElysianHologram from '../components/ElysianHologram';
+import LiveGridMap from '../components/LiveGridMap';
 import { useEmotionAI } from '../hooks/useEmotionAI';
 
 
@@ -46,6 +47,7 @@ const PatientDashboard = () => {
   const [aiState, setAiState] = useState('idle');
   const [aiResult, setAiResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState(null);
 
   useEffect(() => {
     // "Hey MedLink" Wake Word Listener (Hands-free SOS)
@@ -89,6 +91,13 @@ const PatientDashboard = () => {
     setAiResult(null);
     
     try {
+      // Fetch Location during analysis
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        });
+      }
+
       const result = await analyzeSymptoms(input);
       
       const enrichedResult = {
@@ -237,7 +246,18 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {aiResult?.urgency === 'critical' && <div style={{ marginBottom: '2rem' }}><GeoResponder /></div>}
+      {aiResult?.urgency === 'critical' && <div style={{ marginBottom: '2rem' }}><GeoResponder patientLat={location?.lat} patientLng={location?.lng} /></div>}
+
+      <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>National Geospatial Response Grid</h3>
+        <div style={{ height: '350px', borderRadius: '20px', overflow: 'hidden' }}>
+          <LiveGridMap 
+            center={location ? [location.lat, location.lng] : [20.5937, 78.9629]} 
+            zoom={location ? 14 : 5} 
+            markers={location ? [{ position: [location.lat, location.lng], label: "You (Active Signal)", urgency: 'low' }] : []} 
+          />
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
         <AIVisionScanner />
