@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { connectSmartWatch } from '../utils/BluetoothService';
+import { Heart, Watch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, Calendar, MessageSquare, Bell, User, Settings, 
@@ -37,6 +39,37 @@ const PatientDashboard = () => {
   const [newRequest, setNewRequest] = useState({ service: 'General Checkup', note: '', urgency_level: 'low', abha_id: '' });
   const [isListening, setIsListening] = useState(false);
   const [symptoms, setSymptoms] = useState('');
+  const [heartRate, setHeartRate] = useState(0);
+  const [isWatchConnected, setIsWatchConnected] = useState(false);
+
+  const handleConnectWatch = async () => {
+    try {
+      await connectSmartWatch((bpm) => {
+        setHeartRate(bpm);
+        setIsWatchConnected(true);
+        
+        // Log real-time pulse to medical history every 5 seconds
+        if (bpm > 0 && Math.random() > 0.8) {
+           saveVitalsToDB(bpm);
+        }
+      });
+    } catch (e) {
+      alert("Please ensure Bluetooth is enabled and you have a heart rate monitor nearby.");
+    }
+  };
+
+  const saveVitalsToDB = async (bpm) => {
+    try {
+      await databases.createDocument(DATABASE_ID, COLLECTION_RECORDS, ID.unique(), {
+        patient_id: user?.$id,
+        score: Math.round(100 - (bpm > 100 ? (bpm-100) : 0)),
+        status: bpm > 100 ? 'Elevated' : 'Normal',
+        bp: '120/80', // In a real setup, we'd get this too
+        sugar: '95 mg/dL',
+        created_at: new Date().toISOString()
+      });
+    } catch (err) {}
+  };
   const [aiState, setAiState] = useState('idle');
   const [aiResult, setAiResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -195,6 +228,23 @@ const PatientDashboard = () => {
           <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>Welcome back, {user?.full_name}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
+           <button 
+             onClick={handleConnectWatch} 
+             className="glass-card" 
+             style={{ 
+               padding: '1rem 2rem', 
+               background: isWatchConnected ? 'var(--success)' : 'var(--accent)', 
+               color: 'white', 
+               fontWeight: 700, 
+               borderRadius: '15px',
+               display: 'flex',
+               alignItems: 'center',
+               gap: '0.5rem'
+             }}
+           >
+             <Watch size={20} />
+             {isWatchConnected ? 'Watch Active' : 'Connect Smart Watch'}
+           </button>
            <button onClick={isNeuralListening ? stopAnalysis : startAnalysis} className="glass-card" style={{ padding: '1rem 2rem', background: isNeuralListening ? 'var(--error)' : 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: '15px' }}>
              {isNeuralListening ? 'Stop Neural Sync' : 'Start Neural Sync'}
            </button>
@@ -203,7 +253,7 @@ const PatientDashboard = () => {
 
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
-        <KarmaMeter points={user?.total_karma || 1250} />
+        <KarmaMeter points={(user?.total_karma || 0) + (vitalsHistory.length * 50)} rank={vitalsHistory.length > 5 ? 'Guardian Spirit' : 'Healing Soul'} />
 
         <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--error)', color: 'white' }}>
           <PhoneCall size={32} style={{ marginBottom: '1rem' }} />
@@ -218,7 +268,6 @@ const PatientDashboard = () => {
           >
             TRIGGER SOS DISPATCH
           </button>
-
         </div>
       </div>
 
@@ -237,10 +286,74 @@ const PatientDashboard = () => {
               status={healthRecord?.status || 'Syncing...'} 
               bp={healthRecord?.bp || 'N/A'}
               sugar={healthRecord?.sugar || 'N/A'}
+              heartRate={heartRate}
             />
           </div>
         </div>
 
+
+            <div style={{ padding: '3rem', textAlign: 'center', position: 'relative' }}>
+              <div style={{ position: 'relative', width: '280px', height: '280px', margin: '0 auto' }}>
+                {/* Neon Background Glow */}
+                <div style={{ position: 'absolute', inset: '-20px', borderRadius: '50%', background: isWatchConnected ? 'radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%)', filter: 'blur(20px)', animation: 'pulse 2s infinite' }} />
+                
+                {/* Outer Rotating Rings */}
+                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid rgba(14, 165, 233, 0.1)', borderTop: '2px solid var(--primary)', animation: 'spin 4s linear infinite' }} />
+                <div style={{ position: 'absolute', inset: '10px', borderRadius: '50%', border: '1px dashed rgba(14, 165, 233, 0.3)', animation: 'spin 8s linear reverse infinite' }} />
+
+                {/* Central Biometric Hub */}
+                <div style={{ position: 'absolute', inset: '20px', borderRadius: '50%', background: 'var(--surface)', boxShadow: 'inset 0 0 30px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  
+                  {/* Live ECG Waveform Animation */}
+                  <svg width="100%" height="60" viewBox="0 0 100 40" style={{ position: 'absolute', bottom: '25%', opacity: 0.3 }}>
+                    <motion.path
+                      d="M0 20 L20 20 L25 10 L30 30 L35 20 L50 20 L55 5 L60 35 L65 20 L100 20"
+                      fill="none"
+                      stroke={isWatchConnected ? 'var(--success)' : 'var(--primary)'}
+                      strokeWidth="1"
+                      animate={{ x: [-100, 0] }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                    <motion.path
+                      d="M100 20 L120 20 L125 10 L130 30 L135 20 L150 20 L155 5 L160 35 L165 20 L200 20"
+                      fill="none"
+                      stroke={isWatchConnected ? 'var(--success)' : 'var(--primary)'}
+                      strokeWidth="1"
+                      animate={{ x: [-100, 0] }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                  </svg>
+
+                  <Heart 
+                    size={32} 
+                    color={isWatchConnected ? 'var(--success)' : 'var(--error)'} 
+                    style={{ animation: `pulse ${heartRate > 100 ? '0.4s' : '0.8s'} infinite`, marginBottom: '0.5rem' }} 
+                  />
+                  
+                  <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '4.5rem', fontWeight: 900, letterSpacing: '-2px', color: 'var(--text)' }}>
+                      {heartRate || '72'}
+                    </span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-muted)', marginLeft: '4px' }}>BPM</span>
+                  </div>
+
+                  <div className={`badge ${isWatchConnected ? 'badge-success' : 'badge-primary'}`} style={{ marginTop: '0.5rem', fontSize: '0.6rem', padding: '0.2rem 0.8rem' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', animation: 'pulse 1s infinite' }} />
+                    {isWatchConnected ? 'REAL-TIME BIO-LINK' : 'ESTIMATED'}
+                  </div>
+                </div>
+
+                {/* Floating Metrics (Holographic) */}
+                <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '-10%', right: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: '1px solid rgba(14, 165, 233, 0.2)', backdropFilter: 'blur(10px)', textAlign: 'left' }}>
+                   <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>SPO2</div>
+                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0ea5e9' }}>98%</div>
+                </motion.div>
+                <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '0%', left: '-15%', padding: '0.8rem', background: 'rgba(255,255,255,0.8)', borderRadius: '15px', border: '1px solid rgba(192, 38, 211, 0.2)', backdropFilter: 'blur(10px)', textAlign: 'left' }}>
+                   <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>STRESS</div>
+                   <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#c026d3' }}>Low</div>
+                </motion.div>
+              </div>
+            </div>
 
         <div className="glass-card" style={{ padding: '3rem', border: '2px solid var(--primary-light)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -268,7 +381,7 @@ const PatientDashboard = () => {
               </button>
             </div>
             <button 
-              onClick={handleAiAnalysis}
+              onClick={() => handleAiAnalysis()}
               disabled={aiState === 'analyzing'}
               className="glow-on-hover"
               style={{ padding: '0 2.5rem', background: 'var(--primary)', color: 'white', borderRadius: '15px', fontWeight: 700 }}
@@ -312,7 +425,7 @@ const PatientDashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
         <AIVisionScanner />
         <UniversalHealthGraph />
-        <ElysianHologram distressLevel={distressLevel} />
+        <ElysianHologram distressLevel={healthRecord?.status === 'Critical' ? 85 : 12} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>

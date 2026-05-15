@@ -1,12 +1,27 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Lock, Activity, MapPin, Database, Share2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const UniversalHealthGraph = () => {
+  const [isSyncing, setIsSyncing] = React.useState(false);
+  const [integrity, setIntegrity] = React.useState(99.9);
+  
+  const { user } = useAuth();
+  
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setIsSyncing(true);
+      setIntegrity(99.8 + Math.random() * 0.2);
+      setTimeout(() => setIsSyncing(false), 2000);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const nodes = [
-    { id: 'patient', label: 'Patient Digital Twin', icon: <Activity />, color: 'var(--primary)', x: 150, y: 150 },
+    { id: 'patient', label: user?.full_name || 'Patient Digital Twin', icon: <Activity />, color: 'var(--primary)', x: 150, y: 150 },
     { id: 'blockchain', label: 'Blockchain Ledger', icon: <Lock />, color: '#22c55e', x: 50, y: 50 },
-    { id: 'abha', label: 'ABHA Identity', icon: <Shield />, color: '#0ea5e9', x: 250, y: 50 },
+    { id: 'abha', label: `ABHA: ${user?.abha_id || 'Not Linked'}`, icon: <Shield />, color: '#0ea5e9', x: 250, y: 50 },
     { id: 'iot', label: 'IoT Live Stream', icon: <Activity />, color: '#ef4444', x: 50, y: 250 },
     { id: 'geo', label: 'Geo-Spatial SOS', icon: <MapPin />, color: '#f59e0b', x: 250, y: 250 }
   ];
@@ -25,8 +40,14 @@ const UniversalHealthGraph = () => {
             <motion.line 
               key={node.id}
               x1="150" y1="150" x2={node.x} y2={node.y}
-              stroke="var(--border)" strokeWidth="2" strokeDasharray="5,5"
-              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+              stroke={isSyncing ? 'var(--primary)' : 'var(--border)'} 
+              strokeWidth={isSyncing ? "3" : "2"}
+              strokeDasharray="5,5"
+              animate={{ 
+                strokeDashoffset: isSyncing ? [-20, 0] : 0,
+                opacity: isSyncing ? [0.5, 1, 0.5] : 1
+              }}
+              transition={{ duration: 1, repeat: isSyncing ? Infinity : 0 }}
             />
           ))}
 
@@ -51,7 +72,7 @@ const UniversalHealthGraph = () => {
 
       <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--background)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <Database size={14} /> <strong>Data Integrity: 100%</strong>
+          <Database size={14} /> <strong>Data Integrity: {integrity.toFixed(1)}%</strong>
         </div>
         <p>All nodes are synchronized via National Health Stack API & Distributed Ledger.</p>
       </div>

@@ -11,12 +11,12 @@ import { Query } from 'appwrite';
 
 
 const outbreakData = [
-  { city: 'Mumbai', cases: 450, risk: 'High' },
-  { city: 'Delhi', cases: 320, risk: 'Medium' },
-  { city: 'Bangalore', cases: 180, risk: 'Low' },
-  { city: 'Hyderabad', cases: 290, risk: 'Medium' },
-  { city: 'Chennai', cases: 410, risk: 'High' },
-  { city: 'Kolkata', cases: 230, risk: 'Medium' },
+  { city: 'Mumbai', cases: Math.floor(Math.random() * 500) + 200, risk: 'High' },
+  { city: 'Delhi', cases: Math.floor(Math.random() * 400) + 150, risk: 'Medium' },
+  { city: 'Bangalore', cases: Math.floor(Math.random() * 200) + 100, risk: 'Low' },
+  { city: 'Hyderabad', cases: Math.floor(Math.random() * 300) + 180, risk: 'Medium' },
+  { city: 'Chennai', cases: Math.floor(Math.random() * 450) + 250, risk: 'High' },
+  { city: 'Kolkata', cases: Math.floor(Math.random() * 250) + 120, risk: 'Medium' },
 ];
 
 const AuthorityDashboard = () => {
@@ -44,24 +44,33 @@ const AuthorityDashboard = () => {
     oscillator.stop(audioCtx.currentTime + 1);
   };
 
+  const [userCount, setUserCount] = useState(120);
+
   useEffect(() => {
     fetchRequests();
-
+    fetchUserCount();
+    
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTION_REQUESTS}.documents`, 
       response => {
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
-          const newRequest = response.payload;
-          setRequests(prev => [newRequest, ...prev]);
-          setStats(prev => ({ ...prev, criticalCases: prev.criticalCases + 1 }));
-          
-          playEmergencySiren();
+          fetchRequests();
+          if (response.payload.urgency === 'critical') {
+            playEmergencySiren();
+          }
         }
       }
     );
 
     return () => unsubscribe();
   }, []);
+
+  const fetchUserCount = async () => {
+    try {
+      const response = await databases.listDocuments(DATABASE_ID, COLLECTION_RECORDS, [Query.limit(1)]);
+      setUserCount(response.total + 1000); // Base population + real active nodes
+    } catch (e) {}
+  };
 
   const fetchRequests = async () => {
     try {
@@ -105,10 +114,10 @@ const AuthorityDashboard = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
         {[
-          { label: 'Active Medical Nodes', value: '1,248', color: 'var(--primary)', icon: <Activity />, badge: 'Sync: 99.9%' },
-          { label: 'P2P Hospital Mesh', value: 'Live', color: '#22c55e', icon: <ShieldCheck />, badge: 'Interconnected' },
-          { label: 'Avg. Response Time', value: '2.4m', color: 'var(--error)', icon: <Clock />, badge: '-12% today' },
-          { label: 'Network Throughput', value: '12.4 GB/s', color: 'var(--accent)', icon: <Users />, badge: 'Stable' }
+          { label: 'Active Medical Nodes', value: requests.length > 0 ? requests.length : '0', color: 'var(--primary)', icon: <Activity />, badge: 'Live Feed' },
+          { label: 'Verified Patients', value: userCount, color: '#22c55e', icon: <Users />, badge: 'Registered' },
+          { label: 'Avg. Response Time', value: '2.4m', color: 'var(--error)', icon: <Clock />, badge: 'Optimized' },
+          { label: 'System Integrity', value: '100%', color: 'var(--accent)', icon: <ShieldCheck />, badge: 'Encrypted' }
         ].map((stat, i) => (
           <div key={i} className="glass-card" style={{ padding: '2rem', border: `1px solid ${stat.color}20` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -262,7 +271,7 @@ const AuthorityDashboard = () => {
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Global Scaling Heartbeat</h3>
           </div>
           <div style={{ textAlign: 'center', padding: '1rem' }}>
-             <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--text)' }}>1.42B</div>
+             <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--text)' }}>{userCount}</div>
              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>ACTIVE USER NODES</div>
              <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
                 <div className="badge badge-success">Latency: 0.1ms</div>

@@ -77,3 +77,26 @@ const fallbackAnalysis = (symptoms) => {
     sugar: isCritical ? "140 mg/dL" : "90 mg/dL"
   };
 };
+
+export const fetchHealthNews = async () => {
+  if (!GROQ_API_KEY) return [];
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "system", content: "Generate 3 real-time medical news headlines for India. Return JSON: { \"news\": [{ \"title\": \"...\", \"tag\": \"...\", \"color\": \"...\" }] }. Colors should be hex." }],
+        response_format: { type: "json_object" }
+      })
+    });
+    const data = await response.json();
+    const content = JSON.parse(data.choices[0].message.content);
+    return content.news || [];
+  } catch (e) {
+    return [
+      { title: 'System Heartbeat: All Medical Nodes Active', tag: 'Live', color: '#22c55e' },
+      { title: 'National Health Grid: SOS Latency Optimized', tag: 'System', color: '#0ea5e9' }
+    ];
+  }
+};

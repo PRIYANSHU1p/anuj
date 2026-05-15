@@ -2,12 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Newspaper, Bell, ExternalLink } from 'lucide-react';
 
+import { fetchHealthNews } from '../lib/groq';
+
 const AIHealthNews = () => {
-  const news = [
-    { title: 'Monsoon Alert: Rising Dengue Cases in Mumbai', tag: 'High Priority', color: '#ef4444' },
-    { title: 'New Government Health Subsidy for ABHA Holders', tag: 'Update', color: '#0ea5e9' },
-    { title: 'Heatwave Safety: Hydration Guide for Seniors', tag: 'Prevention', color: '#f59e0b' },
-  ];
+  const [news, setNews] = React.useState([]);
+
+  React.useEffect(() => {
+    fetchHealthNews().then(setNews);
+  }, []);
 
   return (
     <div className="glass-card" style={{ padding: '2rem' }}>
