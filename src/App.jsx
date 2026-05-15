@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -102,11 +101,9 @@ function App() {
           <Route path="/doctor-dashboard" element={<ProtectedRoute allowedRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
           <Route path="/authority" element={<ProtectedRoute allowedRole="authority"><AuthorityDashboard /></ProtectedRoute>} />
           
-          <Route path="/patient" element={<Navigate to="/patient-dashboard" />} />
           <Route path="/doctor" element={<Navigate to="/doctor-dashboard" />} />
         </Routes>
         <GridStatus />
-        <SpeedInsights />
       </div>
     </Router>
   );

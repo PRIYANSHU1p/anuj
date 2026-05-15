@@ -28,11 +28,21 @@ const Login = () => {
     
     try {
       if (isRegister) {
+         let finalAbha = formData.abha_id;
+         let finalLicense = formData.license_number;
+
+         if (role === 'patient' && !finalAbha) {
+           finalAbha = `ML-${Math.floor(100000 + Math.random() * 900000)}`;
+         }
+         if (role === 'doctor' && !finalLicense) {
+           finalLicense = `DOC-${Math.floor(100000 + Math.random() * 900000)}`;
+         }
+
          await signUp(formData.email, formData.password, {
            full_name: formData.full_name,
            role: role,
-           license_number: role === 'doctor' ? formData.license_number : null,
-           abha_id: role === 'patient' ? formData.abha_id : null
+           license_number: role === 'doctor' ? finalLicense : null,
+           abha_id: role === 'patient' ? finalAbha : null
          });
         setSuccess(true);
         setTimeout(() => {
@@ -41,7 +51,6 @@ const Login = () => {
         }, 3000);
       } else {
         await login(formData.email, formData.password);
-        // The App.jsx will handle redirection based on user role
       }
     } catch (err) {
       setError(err.message);
@@ -141,7 +150,7 @@ const Login = () => {
                           <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>MEDICAL LICENSE NUMBER</label>
                           <div style={{ position: 'relative' }}>
                             <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                            <input type="text" name="license_number" value={formData.license_number} onChange={handleChange} placeholder="MCI-123456" style={{ width: '100%', paddingLeft: '3rem' }} required />
+                            <input type="text" name="license_number" value={formData.license_number} onChange={handleChange} placeholder="MCI-123456 (Optional)" style={{ width: '100%', paddingLeft: '3rem' }} />
                           </div>
                         </div>
                       )}
@@ -151,7 +160,7 @@ const Login = () => {
                           <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>ABHA ID (NATIONAL HEALTH ID)</label>
                           <div style={{ position: 'relative' }}>
                             <Shield size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                            <input type="text" name="abha_id" value={formData.abha_id} onChange={handleChange} placeholder="12-3456-7890-1234" style={{ width: '100%', paddingLeft: '3rem' }} required />
+                            <input type="text" name="abha_id" value={formData.abha_id} onChange={handleChange} placeholder="12-3456-7890-1234 (Optional)" style={{ width: '100%', paddingLeft: '3rem' }} />
                           </div>
                         </div>
                       )}
