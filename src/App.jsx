@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -105,6 +106,7 @@ function App() {
           <Route path="/doctor" element={<Navigate to="/doctor-dashboard" />} />
         </Routes>
         <GridStatus />
+        <SpeedInsights />
       </div>
     </Router>
   );
