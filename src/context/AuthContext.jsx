@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { client, account } from '../lib/appwrite';
+import { ID } from 'appwrite';
 
 const AuthContext = createContext();
 
@@ -8,94 +9,69 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Failsafe timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      setLoading(current => {
-        if (current) {
-          console.warn('Auth loading timed out. Forcing UI state.');
-          return false;
-        }
-        return current;
-      });
-    }, 5000);
-
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        fetchProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        fetchProfile(session.user);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+    checkUserStatus();
   }, []);
 
-
-  const fetchProfile = async (authUser) => {
+  const checkUserStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        setUser(authUser); // Fallback to base user info
-      } else if (data) {
-        setUser({ ...authUser, ...data });
-      } else {
-        setUser(authUser); // No profile found yet, fallback
+      const session = await account.get();
+      if (session) {
+        // Appwrite stores custom data in 'prefs'
+        setUser({
+          id: session.$id,
+          email: session.email,
+          full_name: session.name,
+          role: session.prefs?.role || 'patient', // Default to patient
+          ...session.prefs
+        });
       }
     } catch (error) {
-      console.error('Fatal profile fetch error:', error);
-      setUser(authUser);
+      console.log('No active session found');
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-
   const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    try {
+      await account.createEmailPasswordSession(email, password);
+      await checkUserStatus();
+    } catch (error) {
+      throw error;
+    }
   };
 
   const signUp = async (email, password, metadata) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: metadata.full_name,
-          role: metadata.role,
-          license_number: metadata.license_number || null,
-        }
-      }
-    });
+    try {
+      // 1. Create the account
+      const userId = ID.unique();
+      await account.create(userId, email, password, metadata.full_name);
+      
+      // 2. Login to set the session (required to update prefs)
+      await account.createEmailPasswordSession(email, password);
+      
+      // 3. Update user preferences with role and other metadata
+      await account.updatePrefs({
+        role: metadata.role,
+        full_name: metadata.full_name,
+        license_number: metadata.license_number || null,
+        created_at: new Date().toISOString()
+      });
 
-    
-    if (error) throw error;
-    return data;
+      await checkUserStatus();
+    } catch (error) {
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await account.deleteSession('current');
+      setUser(null);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (

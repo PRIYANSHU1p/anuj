@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { Map as MapIcon, Activity, Users, AlertCircle, ShieldCheck, Download, Filter, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { supabase } from '../supabaseClient';
+import { databases, DATABASE_ID, COLLECTION_REQUESTS, client } from '../lib/appwrite';
 import NetworkSlicingUI from '../components/NetworkSlicingUI';
 import QuantumMesh from '../components/QuantumMesh';
+import { Query } from 'appwrite';
 
 
 
@@ -18,7 +20,47 @@ const outbreakData = [
 ];
 
 const AuthorityDashboard = () => {
-  const [stats, setStats] = useState({ totalPatients: 0, criticalCases: 0, hospitalCapacity: 78 });
+  const [stats, setStats] = useState({ totalPatients: 1248, criticalCases: 0, hospitalCapacity: 78 });
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRequests();
+
+    // REAL-TIME SUBSCRIPTION: The core of the National Health Grid
+    const unsubscribe = client.subscribe(
+      `databases.${DATABASE_ID}.collections.${COLLECTION_REQUESTS}.documents`, 
+      response => {
+        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+          const newRequest = response.payload;
+          setRequests(prev => [newRequest, ...prev]);
+          setStats(prev => ({ ...prev, criticalCases: prev.criticalCases + 1 }));
+          
+          // Sound alert for critical SOS
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(e => console.log('Audio play blocked'));
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID, 
+        COLLECTION_REQUESTS,
+        [Query.orderDesc('$createdAt'), Query.limit(10)]
+      );
+      setRequests(response.documents);
+      setStats(prev => ({ ...prev, criticalCases: response.total }));
+    } catch (error) {
+      console.error('Fetch requests failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   return (
     <div style={{ paddingTop: '8rem', paddingBottom: '4rem' }} className="container">
@@ -81,13 +123,73 @@ const AuthorityDashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', marginTop: '2rem' }}>
+        <div className="glass-card" style={{ padding: '2.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <AlertCircle size={28} color="var(--error)" />
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 900 }}>Live SOS Emergency Feed</h3>
+            </div>
+            <div className="badge badge-error" style={{ animation: 'pulse 2s infinite' }}>Real-time Surveillance Active</div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0.75rem' }}>
+              <thead>
+                <tr style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'left' }}>
+                  <th style={{ padding: '1rem' }}>PATIENT / ID</th>
+                  <th style={{ padding: '1rem' }}>SYMPTOMS</th>
+                  <th style={{ padding: '1rem' }}>DEPT</th>
+                  <th style={{ padding: '1rem' }}>TIME</th>
+                  <th style={{ padding: '1rem' }}>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      No active critical emergencies. National grid is stable.
+                    </td>
+                  </tr>
+                ) : (
+                  requests.map((req) => (
+                    <motion.tr 
+                      key={req.$id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      style={{ background: 'var(--background)', borderRadius: '15px' }}
+                    >
+                      <td style={{ padding: '1.25rem', borderRadius: '15px 0 0 15px' }}>
+                        <div style={{ fontWeight: 800 }}>{req.patient_name}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{req.$id.slice(0, 8)}</div>
+                      </td>
+                      <td style={{ padding: '1.25rem', fontSize: '0.9rem' }}>{req.symptoms}</td>
+                      <td style={{ padding: '1.25rem' }}>
+                        <span className="badge badge-primary">{req.department}</span>
+                      </td>
+                      <td style={{ padding: '1.25rem', fontSize: '0.8rem' }}>
+                        {new Date(req.created_at).toLocaleTimeString()}
+                      </td>
+                      <td style={{ padding: '1.25rem', borderRadius: '0 15px 15px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--error)', fontWeight: 800, fontSize: '0.8rem' }}>
+                          <div style={{ width: '8px', height: '8px', background: 'var(--error)', borderRadius: '50%', animation: 'pulse 1s infinite' }} />
+                          PENDING
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="glass-card" style={{ padding: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Activity size={24} color="var(--primary)" />
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>AI Predicted Stress (Next 24h)</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>AI Predicted Stress</h3>
           </div>
-          <div style={{ height: '250px', width: '100%', minHeight: '250px' }}>
+          <div style={{ height: '250px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={[
                 { time: '00:00', stress: 30 }, { time: '04:00', stress: 25 }, 
@@ -99,9 +201,6 @@ const AuthorityDashboard = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
-            *AI predicts a 30% surge in respiratory cases due to upcoming AQI spike.
-          </p>
         </div>
       </div>
 

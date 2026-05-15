@@ -19,6 +19,9 @@ import AIVisionScanner from '../components/AIVisionScanner';
 import UniversalHealthGraph from '../components/UniversalHealthGraph';
 import ElysianHologram from '../components/ElysianHologram';
 import { useEmotionAI } from '../hooks/useEmotionAI';
+import { analyzeSymptoms } from '../lib/groq';
+import { databases, DATABASE_ID, COLLECTION_REQUESTS } from '../lib/appwrite';
+import { ID } from 'appwrite';
 
 
 
@@ -83,22 +86,43 @@ const PatientDashboard = () => {
     if (!input) return;
     
     setAiState('analyzing');
-    setAiResult(null); // Clear previous result
+    setAiResult(null);
     
-    setTimeout(() => {
-      const lowerInput = input.toLowerCase();
-      const isCritical = lowerInput.includes('chest pain') || lowerInput.includes('breathing') || lowerInput.includes('emergency') || lowerInput.includes('accident');
+    try {
+      const result = await analyzeSymptoms(input);
       
-      setAiResult({
-        urgency: isCritical ? 'critical' : 'medium',
-        suggestion: isCritical 
-          ? 'CRITICAL ALERT: Cardiac/Respiratory distress suspected. Dispatching nearest Advanced Life Support (ALS) unit. Position patient in semi-sitting posture.' 
-          : 'Analysis Complete: No immediate life threat. Recommended: Virtual consultation with General Practitioner within 4 hours.',
+      const enrichedResult = {
+        ...result,
         blockchainId: `MB-${Math.random().toString(16).slice(2, 10)}`,
         integrity: 'verified'
-      });
+      };
+
+      setAiResult(enrichedResult);
       setAiState('result');
-    }, 1500);
+
+      // If critical, automatically save to Appwrite Database for Authorities
+      if (enrichedResult.urgency === 'critical') {
+        await databases.createDocument(
+          DATABASE_ID,
+          COLLECTION_REQUESTS,
+          ID.unique(),
+          {
+            patient_id: user.id,
+            patient_name: user.full_name,
+            symptoms: input,
+            urgency: 'critical',
+            suggestion: enrichedResult.suggestion,
+            department: enrichedResult.department,
+            location: 'Assigned via GeoResponder', // Would integrate with real GPS in production
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Dashboard AI analysis error:", error);
+      setAiState('idle');
+    }
   };
 
   const { distressLevel, isListening: isNeuralListening, startAnalysis, stopAnalysis } = useEmotionAI();

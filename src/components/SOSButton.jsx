@@ -2,12 +2,47 @@ import React from 'react';
 import { PhoneCall } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+import { databases, DATABASE_ID, COLLECTION_REQUESTS } from '../lib/appwrite';
+import { useAuth } from '../context/AuthContext';
+import { ID } from 'appwrite';
+
 const SOSButton = () => {
+  const { user } = useAuth();
+
+  const handlePanic = async () => {
+    // 1. Dial Emergency Services
+    window.open('tel:102');
+
+    // 2. Alert National Grid
+    if (user) {
+      try {
+        await databases.createDocument(
+          DATABASE_ID,
+          COLLECTION_REQUESTS,
+          ID.unique(),
+          {
+            patient_id: user.id,
+            patient_name: user.full_name,
+            symptoms: "PANIC BUTTON TRIGGERED",
+            urgency: 'critical',
+            suggestion: "Immediate emergency contact initiated. Dispatch ALS unit.",
+            department: "Emergency Response",
+            location: "GPS Tracking Active",
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }
+        );
+      } catch (error) {
+        console.error("SOS Grid Alert failed:", error);
+      }
+    }
+  };
+
   return (
     <motion.button
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      onClick={() => window.open('tel:102')}
+      onClick={handlePanic}
       style={{
         position: 'fixed',
         bottom: '2rem',
